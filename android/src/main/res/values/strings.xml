@@ -13,9 +13,6 @@
 
   <string name="unrecognized_media_format">Unrecognized media format</string>
 
-  <!-- Sridhar added -->
-  <string name="crypto_exception">Failed to decrypt the media</string>
-
   <string name="error_drm_unsupported_scheme">This device does not support the required DRM scheme</string>
 
   <string name="error_drm_unknown">An unknown DRM error occurred</string>

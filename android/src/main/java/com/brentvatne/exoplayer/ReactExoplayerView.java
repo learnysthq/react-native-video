@@ -204,7 +204,7 @@ class ReactExoplayerView extends FrameLayout implements
     private String drmLicenseUrl = null;
     private String[] drmLicenseHeader = null;
     private String drmOfflineKeySetIdStr = null; //sridhar
-    private boolean controls;
+    private boolean controls = false; //Sridhar initialized to false
     // \ End props
 
     // React
@@ -529,39 +529,53 @@ class ReactExoplayerView extends FrameLayout implements
                     }
                     if (playerNeedsSource && srcUri != null) {
                         exoPlayerView.invalidateAspectRatio();
-                        // DRM session manager creation must be done on a different thread to prevent crashes so we start a new thread
-                        ExecutorService es = Executors.newSingleThreadExecutor();
-                        es.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                // DRM initialization must run on a different thread
-                                DrmSessionManager drmSessionManager = initializePlayerDrm(self);
-                                if (drmSessionManager == null && self.drmUUID != null) {
-                                    // Failed to intialize DRM session manager - cannot continue
-                                    Log.e("ExoPlayer Exception", "Failed to initialize DRM Session Manager Framework!");
-                                    eventEmitter.error("Failed to initialize DRM Session Manager Framework!", new Exception("DRM Session Manager Framework failure!"), "3003");
-                                    return;
-                                }
 
-                                // Initialize handler to run on the main thread
-                                activity.runOnUiThread(new Runnable() {
-                                    public void run() {
-                                        try {
-                                            // Source initialization must run on the main thread
-                                            initializePlayerSource(self, drmSessionManager);
-                                        } catch (Exception ex) {
-                                            self.playerNeedsSource = true;
-                                            Log.e("ExoPlayer Exception", "Failed to initialize Player!");
-                                            Log.e("ExoPlayer Exception", ex.toString());
-                                            self.eventEmitter.error(ex.toString(), ex, "1001");
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    } else if (srcUri != null) {
-                        initializePlayerSource(self, null);
-                    }
+                        //Sridhar - resolved issue of multiple initializations
+                        DrmSessionManager drmSessionManager = initializePlayerDrm(self);
+                        if (drmSessionManager == null && self.drmUUID != null) {
+                            // Failed to intialize DRM session manager - cannot continue
+                            Log.e("ExoPlayer Exception", "Failed to initialize DRM Session Manager Framework!");
+                            eventEmitter.error("Failed to initialize DRM Session Manager Framework!", new Exception("DRM Session Manager Framework failure!"), "3003");
+                            return;
+                        }
+
+                        initializePlayerSource(self, drmSessionManager);
+
+                        //Sridhar commented. The below code is initializing drmsession multiple times and failing
+                        // DRM session manager creation must be done on a different thread to prevent crashes so we start a new thread
+                        // ExecutorService es = Executors.newSingleThreadExecutor();
+                        // es.execute(new Runnable() {
+                        //     @Override
+                        //     public void run() {
+                        //         // DRM initialization must run on a different thread
+                        //         DrmSessionManager drmSessionManager = initializePlayerDrm(self);
+                        //         if (drmSessionManager == null && self.drmUUID != null) {
+                        //             // Failed to intialize DRM session manager - cannot continue
+                        //             Log.e("ExoPlayer Exception", "Failed to initialize DRM Session Manager Framework!");
+                        //             eventEmitter.error("Failed to initialize DRM Session Manager Framework!", new Exception("DRM Session Manager Framework failure!"), "3003");
+                        //             return;
+                        //         }
+
+                        //         // Initialize handler to run on the main thread
+                        //         activity.runOnUiThread(new Runnable() {
+                        //             public void run() {
+                        //                 try {
+                        //                     // Source initialization must run on the main thread
+                        //                     initializePlayerSource(self, drmSessionManager);
+                        //                 } catch (Exception ex) {
+                        //                     self.playerNeedsSource = true;
+                        //                     Log.e("ExoPlayer Exception", "Failed to initialize Player!");
+                        //                     Log.e("ExoPlayer Exception", ex.toString());
+                        //                     self.eventEmitter.error(ex.toString(), ex, "1001");
+                        //                 }
+                        //             }
+                        //         });
+                        //     }
+                        // });
+                    } 
+
+                    //Sridhar - Removed initializePlayerSource in if condition and added only control initialization
+                    finishPlayerInitialization();
                 } catch (Exception ex) {
                     self.playerNeedsSource = true;
                     Log.e("ExoPlayer Exception", "Failed to initialize Player!");
@@ -594,21 +608,7 @@ class ReactExoplayerView extends FrameLayout implements
         DefaultRenderersFactory renderersFactory =
                 new DefaultRenderersFactory(getContext())
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF);
-        // DRM Learnyst
-        DrmSessionManager drmSessionManager = null;
-        if (self.drmUUID != null) {
-            try {
-                drmSessionManager = buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
-                        self.drmLicenseHeader, 0, self.drmOfflineKeySetIdStr); //sridhar
-            } catch (UnsupportedDrmException e) {
-                int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
-                        : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
-                        ? R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown);
-                eventEmitter.error(getResources().getString(errorStringId), e);
-                return;
-            }
-        }
-        // End Drm Learnyst
+
         player = new ExoPlayer.Builder(getContext(), renderersFactory)
                     .setTrackSelector​(self.trackSelector)
                     .setBandwidthMeter(bandwidthMeter)
@@ -623,7 +623,6 @@ class ReactExoplayerView extends FrameLayout implements
 
         PlaybackParameters params = new PlaybackParameters(rate, 1f);
         player.setPlaybackParameters(params);
-    
     }
 
     private DrmSessionManager initializePlayerDrm(ReactExoplayerView self) {
@@ -631,7 +630,7 @@ class ReactExoplayerView extends FrameLayout implements
         if (self.drmUUID != null) {
             try {
                 drmSessionManager = self.buildDrmSessionManager(self.drmUUID, self.drmLicenseUrl,
-                        self.drmLicenseHeader);
+                        self.drmLicenseHeader, self.drmOfflineKeySetIdStr); //Sridhar
             } catch (UnsupportedDrmException e) {
                 int errorStringId = Util.SDK_INT < 18 ? R.string.error_drm_not_supported
                         : (e.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
@@ -678,43 +677,46 @@ class ReactExoplayerView extends FrameLayout implements
         eventEmitter.loadStart();
         loadVideoStarted = true;
 
-        finishPlayerInitialization();
+        //finishPlayerInitialization();  //Sridhar commented
     }
 
     private void finishPlayerInitialization() {
-        // Initializing the playerControlView
-        initializePlayerControl();
-        setControls(controls);
-        applyModifiers();
-        startBufferCheckTimer();
+        //Sridhar added check
+        if (this.controls == true) {
+            // Initializing the playerControlView
+            initializePlayerControl();
+            setControls(controls);
+            applyModifiers();
+            startBufferCheckTimer();
+        }
     }
 
-    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray) throws UnsupportedDrmException {
-        return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, 0, null);
+    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, 
+                                        String drmOfflineKeySetIdStr) throws UnsupportedDrmException { //Sridhar
+        return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, 0, drmOfflineKeySetIdStr); //Sridhar
     }
 
-    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, int retryCount, String drmOfflineKeySetIdStr) throws UnsupportedDrmException { //sridhar
+    private DrmSessionManager buildDrmSessionManager(UUID uuid, String licenseUrl, String[] keyRequestPropertiesArray, 
+                    int retryCount, String drmOfflineKeySetIdStr) throws UnsupportedDrmException {  //Sridhar
         if (Util.SDK_INT < 18) {
             return null;
         }
-        HttpMediaDrmCallback drmCallback;
+
         try {
-            drmCallback = new HttpMediaDrmCallback(licenseUrl,
+            HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl,
                     buildHttpDataSourceFactory(false));
             if (keyRequestPropertiesArray != null) {
                 for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
                     drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i], keyRequestPropertiesArray[i + 1]);
                 }
             }
+
             /* Sridhar - start */
             releaseMediaDrm();
-            FrameworkMediaDrm mediaDrm = FrameworkMediaDrm.newInstance(uuid);
+            mediaDrm = FrameworkMediaDrm.newInstance(uuid);
             DefaultDrmSessionManager drmSessionManager;
-            // if (hasDrmFailed) {
-            //     // When DRM fails using L1 we want to switch to L3
-            //     mediaDrm.setPropertyString("securityLevel", "L3");
-            // }
-            drmSessionManager = new DefaultDrmSessionManager(uuid,mediaDrm, drmCallback, null, false, 3);
+            drmSessionManager = new DefaultDrmSessionManager(uuid,
+                    mediaDrm, drmCallback, null, false, 3);
 
             if (drmOfflineKeySetIdStr != null) {
                 byte[] offlineAssetKeyId = Base64.decode(drmOfflineKeySetIdStr, Base64.DEFAULT);
@@ -723,15 +725,24 @@ class ReactExoplayerView extends FrameLayout implements
                     return drmSessionManager;
                 }
             }
+
             return drmSessionManager;
             /* Sridhar - end */
+
+            //Sridhar commented
+            // FrameworkMediaDrm mediaDrm = FrameworkMediaDrm.newInstance(uuid);
+            // if (hasDrmFailed) {
+            //     // When DRM fails using L1 we want to switch to L3
+            //     mediaDrm.setPropertyString("securityLevel", "L3");
+            // }
+            // return new DefaultDrmSessionManager(uuid, mediaDrm, drmCallback, null, false, 3);
         } catch(UnsupportedDrmException ex) {
             // Unsupported DRM exceptions are handled by the calling method
             throw ex;
         } catch (Exception ex) {
             if (retryCount < 3) {
                 // Attempt retry 3 times in case where the OS Media DRM Framework fails for whatever reason
-                return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, ++retryCount, null);
+                return buildDrmSessionManager(uuid, licenseUrl, keyRequestPropertiesArray, ++retryCount, drmOfflineKeySetIdStr);  //Sridhar
             }
             // Handle the unknow exception and emit to JS
             eventEmitter.error(ex.toString(), ex, "3006");
@@ -963,38 +974,6 @@ class ReactExoplayerView extends FrameLayout implements
     /* Sridhar: pause/resume not working. So commented this code temporarily*/
     @Override
     public void onAudioFocusChange(int focusChange) {
-
-        // switch (focusChange) {
-        //     case AudioManager.AUDIOFOCUS_LOSS:
-        //         eventEmitter.audioFocusChanged(false);
-        //         System.out.println("pausePlayback-1 ");
-        //         pausePlayback();
-        //         audioManager.abandonAudioFocus(this);
-        //         break;
-        //     case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-        //         eventEmitter.audioFocusChanged(false);
-        //         break;
-        //     case AudioManager.AUDIOFOCUS_GAIN:
-        //         eventEmitter.audioFocusChanged(true);
-        //         break;
-        //     default:
-        //         break;
-        // }
-
-        // if (player != null) {
-        //     if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-        //         // Lower the volume
-        //         if (!muted) {
-        //             player.setVolume(audioVolume * 0.8f);
-        //         }
-        //     } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
-        //         // Raise it back to normal
-        //         if (!muted) {
-        //             player.setVolume(audioVolume * 1);
-        //         }
-        //     }
-        // }
-
         // switch (focusChange) {
         //     case AudioManager.AUDIOFOCUS_LOSS:
         //         this.hasAudioFocus = false;
@@ -1404,9 +1383,7 @@ class ReactExoplayerView extends FrameLayout implements
             default:
                 break;
         }
-
         eventEmitter.error(errorString, e, errorCode);
-
         playerNeedsSource = true;
         if (isBehindLiveWindow(e)) {
             clearResumePosition();
@@ -1418,14 +1395,6 @@ class ReactExoplayerView extends FrameLayout implements
             }
         }
     }
-
-    /*Sridhar start*/
-    private String getStackTrace(Throwable t) {
-        StringWriter sw = new StringWriter();
-        t.printStackTrace(new PrintWriter(sw));
-        return sw.toString();
-    }
-    /*Sridhar end*/
 
     private static boolean isBehindLiveWindow(PlaybackException e) {
         return e.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW;
@@ -1912,7 +1881,7 @@ class ReactExoplayerView extends FrameLayout implements
         this.drmOfflineKeySetIdStr = offlineKeySetIdStr;
     }
     /*Sridhar end*/
-        
+
     @Override
     public void onDrmKeysLoaded(int windowIndex, MediaSource.MediaPeriodId mediaPeriodId) {
         Log.d("DRM Info", "onDrmKeysLoaded");

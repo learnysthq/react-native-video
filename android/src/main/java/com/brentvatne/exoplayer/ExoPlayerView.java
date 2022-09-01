@@ -114,7 +114,6 @@ public final class ExoPlayerView extends FrameLayout {
 
     private void updateSurfaceView() {
         View view;
-
         if (!useTextureView || useSecureView) {
             view = new SurfaceView(context);
             if (useSecureView) {
@@ -123,7 +122,6 @@ public final class ExoPlayerView extends FrameLayout {
         } else {
             view = new TextureView(context);
         }
-
         view.setLayoutParams(layoutParams);
 
         surfaceView = view;

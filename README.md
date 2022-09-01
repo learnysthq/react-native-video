@@ -1,4 +1,5 @@
 # react-native-video
+
 #### A `<Video>` component for react-native.
 
 Version 6.x recommends react-native >= 0.68.2. For older versions of react-native, [please use version 5.x](https://github.com/react-native-video/react-native-video/tree/v5.2.0).

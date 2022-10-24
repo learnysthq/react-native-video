@@ -302,7 +302,7 @@ class ReactExoplayerView extends FrameLayout implements
         /* We want to be able to continue playing audio when switching tabs.
          * Leave this here in case it causes issues.
          */
-        // stopPlayback();
+        stopPlayback(); //Sridhar 
     }
 
     // LifecycleEventListener implementation
@@ -516,6 +516,10 @@ class ReactExoplayerView extends FrameLayout implements
     }
 
     private void initializePlayer() {
+        /*Decoder resources will be leaked if player not released in some error cases.
+        So make sure release old player before creating new one.*/
+        releasePlayer(); //Sridhar
+
         ReactExoplayerView self = this;
         Activity activity = themedReactContext.getCurrentActivity();
         // This ensures all props have been settled, to avoid async racing conditions.
@@ -608,6 +612,9 @@ class ReactExoplayerView extends FrameLayout implements
         DefaultRenderersFactory renderersFactory =
                 new DefaultRenderersFactory(getContext())
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF);
+
+        //https://github.com/google/ExoPlayer/issues/9396
+        renderersFactory.setEnableDecoderFallback(true); //Sridhar
 
         player = new ExoPlayer.Builder(getContext(), renderersFactory)
                     .setTrackSelector​(self.trackSelector)

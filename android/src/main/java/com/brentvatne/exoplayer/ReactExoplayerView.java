@@ -90,6 +90,9 @@ import com.google.android.exoplayer2.source.dash.manifest.AdaptationSet;
 import com.google.android.exoplayer2.source.dash.manifest.Representation;
 import com.google.android.exoplayer2.source.dash.manifest.Descriptor;
 
+//Sridhar added
+import  com.google.android.exoplayer2.util.MimeTypes;
+
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -764,7 +767,8 @@ class ReactExoplayerView extends FrameLayout implements
         int type = Util.inferContentType(!TextUtils.isEmpty(overrideExtension) ? "." + overrideExtension
                 : uri.getLastPathSegment());
         config.setDisableDisconnectError(this.disableDisconnectError);
-        MediaItem mediaItem = new MediaItem.Builder().setUri(uri).build();
+
+        MediaItem mediaItem = new MediaItem.Builder().setUri(uri).setMimeType(MimeTypes.APPLICATION_MPD).build();
         DrmSessionManagerProvider drmProvider = null;
         if (drmSessionManager != null) {
             drmProvider = new DrmSessionManagerProvider() {

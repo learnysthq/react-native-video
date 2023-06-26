@@ -158,6 +158,7 @@ class ReactExoplayerView extends FrameLayout implements
     private boolean isFullscreen;
     private boolean isInBackground;
     private boolean isPaused;
+    private boolean ignore1080pTrack = false; //Sridhar
     private boolean isBuffering;
     private boolean muted = false;
     private boolean hasAudioFocus = false;
@@ -594,8 +595,18 @@ class ReactExoplayerView extends FrameLayout implements
     private void initializePlayerCore(ReactExoplayerView self) {
         ExoTrackSelection.Factory videoTrackSelectionFactory = new AdaptiveTrackSelection.Factory();
         self.trackSelector = new DefaultTrackSelector(videoTrackSelectionFactory);
-        self.trackSelector.setParameters(trackSelector.buildUponParameters()
-                .setMaxVideoBitrate(maxBitRate == 0 ? Integer.MAX_VALUE : maxBitRate));
+
+        //Sridhar changed
+        if (ignore1080pTrack == true) {
+            System.out.println("initializePlayerCore: Ignoring 1080p track");
+
+            self.trackSelector.setParameters(trackSelector.buildUponParameters()
+                    .setMaxVideoBitrate(maxBitRate == 0 ? Integer.MAX_VALUE : maxBitRate)
+                    .setMaxVideoSize(1280, 720));
+        } else {
+            self.trackSelector.setParameters(trackSelector.buildUponParameters()
+                    .setMaxVideoBitrate(maxBitRate == 0 ? Integer.MAX_VALUE : maxBitRate));            
+        }
 
         DefaultAllocator allocator = new DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE);
         RNVLoadControl loadControl = new RNVLoadControl(
@@ -617,7 +628,7 @@ class ReactExoplayerView extends FrameLayout implements
         renderersFactory.setEnableDecoderFallback(true); //Sridhar
 
         player = new ExoPlayer.Builder(getContext(), renderersFactory)
-                    .setTrackSelector​(self.trackSelector)
+                    .setTrackSelector(self.trackSelector)
                     .setBandwidthMeter(bandwidthMeter)
                     .setLoadControl(loadControl)
                     .build();
@@ -1156,8 +1167,8 @@ class ReactExoplayerView extends FrameLayout implements
         }
         return audioTracks;
     }
-    private WritableArray getVideoTrackInfo(int trackRendererIndex) {
 
+    private WritableArray getVideoTrackInfo(int trackRendererIndex) {
         if (this.contentStartTime != -1L) {
             WritableArray contentVideoTracks = this.getVideoTrackInfoFromManifest();
             if (contentVideoTracks != null) {
@@ -1181,6 +1192,12 @@ class ReactExoplayerView extends FrameLayout implements
             for (int trackIndex = 0; trackIndex < group.length; trackIndex++) {
                 Format format = group.getFormat(trackIndex);
                 if (isFormatSupported(format)) {
+
+                    if ((ignore1080pTrack == true) && (format.height >= 1080)){
+                        System.out.println("getVideoTrackInfo, Ignoring 1080p track");
+                        continue;
+                    }
+
                     WritableMap videoTrack = Arguments.createMap();
                     videoTrack.putInt("width", format.width == Format.NO_VALUE ? 0 : format.width);
                     videoTrack.putInt("height",format.height == Format.NO_VALUE ? 0 : format.height);
@@ -1560,6 +1577,7 @@ class ReactExoplayerView extends FrameLayout implements
             }
         } else if (type.equals("resolution")) {
             int height = value.asInt();
+
             for (int i = 0; i < groups.length; ++i) { // Search for the exact height
                 TrackGroup group = groups.get(i);
                 Format closestFormat = null;
@@ -1567,8 +1585,10 @@ class ReactExoplayerView extends FrameLayout implements
                 boolean usingExactMatch = false;
                 for (int j = 0; j < group.length; j++) {
                     Format format = group.getFormat(j);
+
                     if (format.height == height) {
                         groupIndex = i;
+
                         tracks.set(0, j);
                         closestFormat = null;
                         closestTrackIndex = -1;
@@ -1590,6 +1610,7 @@ class ReactExoplayerView extends FrameLayout implements
                 }
                 // This is a fallback if the new period contains only higher resolutions than the user has selected
                 if (closestFormat == null && isUsingContentResolution && !usingExactMatch) {
+
                     // No close match found - so we pick the lowest quality
                     int minHeight = Integer.MAX_VALUE;
                     for (int j = 0; j < group.length; j++) {
@@ -1646,6 +1667,11 @@ class ReactExoplayerView extends FrameLayout implements
                 for (int k = 0; k < allTracks.size(); k++) {
                     Format format = group.getFormat(k);
                     if (isFormatSupported(format)) {
+                        if ((ignore1080pTrack == true) && (format.height >= 1080)) {
+                            System.out.println("setSelectedTrack: Ignoring 1080p track");
+                            continue;
+                        }
+
                         tracks.add(allTracks.get(k));
                         supportedTrackList.add(allTracks.get(k));
                     }
@@ -1722,6 +1748,11 @@ class ReactExoplayerView extends FrameLayout implements
         textTrackType = type;
         textTrackValue = value;
         setSelectedTrack(C.TRACK_TYPE_TEXT, textTrackType, textTrackValue);
+    }
+
+    //Sridhar
+    public void setIgnore1080pTrack(boolean ignore1080p) {
+        ignore1080pTrack = ignore1080p;
     }
 
     public void setPausedModifier(boolean paused) {

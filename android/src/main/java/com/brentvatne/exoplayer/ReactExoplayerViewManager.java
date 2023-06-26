@@ -75,6 +75,7 @@ public class ReactExoplayerViewManager extends ViewGroupManager<ReactExoplayerVi
     private static final String PROP_USE_TEXTURE_VIEW = "useTextureView";
     private static final String PROP_SECURE_VIEW = "useSecureView";
     private static final String PROP_SELECTED_VIDEO_TRACK = "selectedVideoTrack";
+    private static final String PROP_IGNORE_1080P_TRACK = "ignore1080pTrack"; //Sridhar
     private static final String PROP_SELECTED_VIDEO_TRACK_TYPE = "type";
     private static final String PROP_SELECTED_VIDEO_TRACK_VALUE = "value";
     private static final String PROP_HIDE_SHUTTER_VIEW = "hideShutterView";
@@ -244,6 +245,13 @@ public class ReactExoplayerViewManager extends ViewGroupManager<ReactExoplayerVi
                     ? selectedTextTrack.getDynamic(PROP_SELECTED_TEXT_TRACK_VALUE) : null;
         }
         videoView.setSelectedTextTrack(typeString, value);
+    }
+
+    //Sridhar
+    @ReactProp(name = PROP_IGNORE_1080P_TRACK, defaultBoolean = false)
+    public void setIgnore1080pTrack(final ReactExoplayerView videoView, final boolean ignore1080pTrack) {
+        System.out.println("ReactExoplayerViewManager: setIgnore1080pTrack: " + ignore1080pTrack);
+        videoView.setIgnore1080pTrack(ignore1080pTrack);
     }
 
     @ReactProp(name = PROP_TEXT_TRACKS)

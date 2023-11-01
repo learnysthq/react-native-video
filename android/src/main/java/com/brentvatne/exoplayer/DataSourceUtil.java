@@ -4,6 +4,7 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.modules.network.CookieJarContainer;
 import com.facebook.react.modules.network.ForwardingCookieHandler;
 import com.facebook.react.modules.network.OkHttpClientProvider;
+import com.facebook.react.modules.network.ReactCookieJarContainer;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
@@ -14,7 +15,17 @@ import com.google.android.exoplayer2.util.Util;
 import okhttp3.Call;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
+
+import java.net.SocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.Map;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
+import java.util.List;
 
 public class DataSourceUtil {
 
@@ -81,7 +92,32 @@ public class DataSourceUtil {
     }
 
     private static HttpDataSource.Factory buildHttpDataSourceFactory(ReactContext context, DefaultBandwidthMeter bandwidthMeter, Map<String, String> requestHeaders) {
-        OkHttpClient client = OkHttpClientProvider.getOkHttpClient();
+        /*Sridhar - To bypass proxy for localhost - start*/
+        //OkHttpClient client = OkHttpClientProvider.getOkHttpClient();
+        ProxySelector proxySelector = new ProxySelector() {
+            @Override
+            public void connectFailed(URI uri, SocketAddress addr, IOException error) {
+                System.err.println("React-Native-Video: Failed to connect to proxy!!!!");
+            }
+
+            @Override
+            public List<Proxy> select(URI uri) {
+                if (uri.getHost() != null && (uri.getHost().equals("localhost") || uri.getHost().equals("127.0.0.1"))) {
+                    // If the request is for localhost, don't use a proxy
+                    List<Proxy> proxyList = new ArrayList<Proxy>(1);
+                    proxyList.add(Proxy.NO_PROXY);
+                    return proxyList;
+                } else {
+                    // For other requests, use the default proxy (if any)
+                    return ProxySelector.getDefault().select(uri);
+                }
+            }
+        };
+
+        OkHttpClient client = new OkHttpClient.Builder().proxySelector(proxySelector).cookieJar(new ReactCookieJarContainer()).build();
+
+        /*Sridhar - To bypass proxy for localhost - end*/
+
         CookieJarContainer container = (CookieJarContainer) client.cookieJar();
         ForwardingCookieHandler handler = new ForwardingCookieHandler(context);
         container.setCookieJar(new JavaNetCookieJar(handler));

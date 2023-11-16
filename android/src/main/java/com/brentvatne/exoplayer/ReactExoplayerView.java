@@ -732,6 +732,9 @@ class ReactExoplayerView extends FrameLayout implements
             /* Sridhar - start */
             releaseMediaDrm();
             mediaDrm = FrameworkMediaDrm.newInstance(uuid);
+
+            //force DRM to L3. Some mobiles which support L1 not playing video. provisioning is failing
+            mediaDrm.setPropertyString("securityLevel", "L3");
             DefaultDrmSessionManager drmSessionManager;
             drmSessionManager = new DefaultDrmSessionManager(uuid,
                     mediaDrm, drmCallback, null, false, 3);

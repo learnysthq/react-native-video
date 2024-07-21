@@ -38,6 +38,7 @@ dependencies {
     // implementation('com.google.android.exoplayer:exoplayer:2.17.1') {
     //     exclude group: 'com.android.support'
     // }
+    implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation project(':exoplayer-library-core')
     implementation project(':exoplayer-library-dash')
     implementation project(':exoplayer-library-ui')

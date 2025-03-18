@@ -411,8 +411,8 @@ class ReactExoplayerView extends FrameLayout implements
         eventListener = new Player.Listener() {
             @Override
             public void onPlaybackStateChanged(int playbackState) {
-                View playButton = playerControlView.findViewById(R.id.exo_play);
-                View pauseButton = playerControlView.findViewById(R.id.exo_pause);
+                ImageButton playButton = playerControlView.findViewById(R.id.exo_play);
+                ImageButton pauseButton = playerControlView.findViewById(R.id.exo_pause);
                 if (playButton != null && playButton.getVisibility() == GONE) {
                     playButton.setVisibility(INVISIBLE);
                 }

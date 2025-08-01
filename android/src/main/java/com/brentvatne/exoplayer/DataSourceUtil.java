@@ -16,6 +16,23 @@ import okhttp3.Call;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 
+//Sridhar
+import java.security.cert.CertificateException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
+import okhttp3.Interceptor;
+import okhttp3.Request;
+import okhttp3.Response;
+import java.io.IOException;
+import android.util.Log;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+
+
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -114,8 +131,45 @@ public class DataSourceUtil {
             }
         };
 
-        OkHttpClient client = new OkHttpClient.Builder().proxySelector(proxySelector).cookieJar(new ReactCookieJarContainer()).build();
+        //OkHttpClient client = new OkHttpClient.Builder().proxySelector(proxySelector).cookieJar(new ReactCookieJarContainer()).build();
+        //Sridhar bypass SSL cert validation        
+        OkHttpClient client = null;
 
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[] {
+                new X509TrustManager() {
+                    @Override public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+                    @Override public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+                    @Override public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[]{}; }
+                }
+            };
+
+            SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+
+            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+            client = new OkHttpClient.Builder()
+                .proxySelector(proxySelector)
+                .sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0])
+                .hostnameVerifier((hostname, session) -> true)
+                .cookieJar(new ReactCookieJarContainer())
+                .addInterceptor(new Interceptor() {
+                    @Override
+                    public Response intercept(Chain chain) throws IOException {
+                        Request request = chain.request();
+                        Log.d("LstDrm", "Exoplayer Requesting: " + request.url());
+                        System.err.println("LstDrm: Exoplayer Requesting: " + request.url());
+                        return chain.proceed(request);
+                    }
+                })
+                .build();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback or throw runtime exception
+            throw new RuntimeException("Failed to create SSL trusting client", e);
+        }
         /*Sridhar - To bypass proxy for localhost - end*/
 
         CookieJarContainer container = (CookieJarContainer) client.cookieJar();

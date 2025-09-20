@@ -159,7 +159,7 @@ public class DataSourceUtil {
                     public Response intercept(Chain chain) throws IOException {
                         Request request = chain.request();
                         Log.d("LstDrm", "Exoplayer Requesting: " + request.url());
-                        System.err.println("LstDrm: Exoplayer Requesting: " + request.url());
+                        //System.err.println("LstDrm: Exoplayer Requesting: " + request.url());
                         return chain.proceed(request);
                     }
                 })

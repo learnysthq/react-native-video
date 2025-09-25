@@ -733,9 +733,19 @@ class ReactExoplayerView extends FrameLayout implements
             releaseMediaDrm();
             mediaDrm = FrameworkMediaDrm.newInstance(uuid);
 
+            // Log security level and vendor
+            try {
+                String secLevel = mediaDrm.getPropertyString("securityLevel");
+                String vendor   = mediaDrm.getPropertyString("vendor");
+                String version  = mediaDrm.getPropertyString("version");
+                Log.d("DRM Debug", "SecurityLevel=" + secLevel + ", Vendor=" + vendor + ", Version=" + version);
+            } catch (Exception e) {
+                Log.e("DRM Debug", "Failed to get securityLevel", e);
+            }
+
             //force DRM to L3. Some mobiles which support L1 not playing video. provisioning is failing
             //System.out.println("lPlayer:: Setting DRM level to L3");
-            //mediaDrm.setPropertyString("securityLevel", "L3");
+            mediaDrm.setPropertyString("securityLevel", "L3");
             DefaultDrmSessionManager drmSessionManager;
             drmSessionManager = new DefaultDrmSessionManager(uuid,
                     mediaDrm, drmCallback, null, false, 3);
@@ -755,7 +765,6 @@ class ReactExoplayerView extends FrameLayout implements
             // FrameworkMediaDrm mediaDrm = FrameworkMediaDrm.newInstance(uuid);
             // if (hasDrmFailed) {
             //     // When DRM fails using L1 we want to switch to L3
-            //     mediaDrm.setPropertyString("securityLevel", "L3");
             // }
             // return new DefaultDrmSessionManager(uuid, mediaDrm, drmCallback, null, false, 3);
         } catch(UnsupportedDrmException ex) {
@@ -1931,7 +1940,7 @@ class ReactExoplayerView extends FrameLayout implements
 
     @Override
     public void onDrmSessionManagerError(int windowIndex, MediaSource.MediaPeriodId mediaPeriodId, Exception e) {
-        Log.d("DRM Info", "onDrmSessionManagerError");
+        Log.e("DRM Debug", "DRM session error", e);
         eventEmitter.error("onDrmSessionManagerError", e, "3002");
     }
 

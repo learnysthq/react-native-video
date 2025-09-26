@@ -733,32 +733,34 @@ class ReactExoplayerView extends FrameLayout implements
             releaseMediaDrm();
             mediaDrm = FrameworkMediaDrm.newInstance(uuid);
 
-            // Log security level and vendor
-            try {
-                String secLevel = mediaDrm.getPropertyString("securityLevel");
-                String vendor   = mediaDrm.getPropertyString("vendor");
-                String version  = mediaDrm.getPropertyString("version");
-                Log.d("DRM Debug", "SecurityLevel=" + secLevel + ", Vendor=" + vendor + ", Version=" + version);
-            } catch (Exception e) {
-                Log.e("DRM Debug", "Failed to get securityLevel", e);
+            // --- custom prefix logic ---
+            String tmpDrmOfflineKeySetIdStr = drmOfflineKeySetIdStr;
+            if (drmOfflineKeySetIdStr != null) {
+                if (drmOfflineKeySetIdStr.startsWith("L1#")) {
+                    mediaDrm.setPropertyString("securityLevel", "L1");
+                    tmpDrmOfflineKeySetIdStr = drmOfflineKeySetIdStr.substring(3); 
+                } else if (drmOfflineKeySetIdStr.startsWith("L3#")) {
+                    mediaDrm.setPropertyString("securityLevel", "L3");            
+                    tmpDrmOfflineKeySetIdStr = drmOfflineKeySetIdStr.substring(3);
+                } else {
+                    tmpDrmOfflineKeySetIdStr = drmOfflineKeySetIdStr;          
+                }
             }
 
-            //force DRM to L3. Some mobiles which support L1 not playing video. provisioning is failing
-            //System.out.println("lPlayer:: Setting DRM level to L3");
-            mediaDrm.setPropertyString("securityLevel", "L3");
-            DefaultDrmSessionManager drmSessionManager;
-            drmSessionManager = new DefaultDrmSessionManager(uuid,
-                    mediaDrm, drmCallback, null, false, 3);
+            // Build session manager
+            DefaultDrmSessionManager drmSessionManager =
+                    new DefaultDrmSessionManager(uuid, mediaDrm, drmCallback, null, false, 3);
 
-            if (drmOfflineKeySetIdStr != null) {
-                byte[] offlineAssetKeyId = Base64.decode(drmOfflineKeySetIdStr, Base64.DEFAULT);
-                if ((offlineAssetKeyId != null) && (offlineAssetKeyId.length > 0)) {
+            if (tmpDrmOfflineKeySetIdStr != null) {
+                byte[] offlineAssetKeyId = Base64.decode(tmpDrmOfflineKeySetIdStr, Base64.DEFAULT);
+                if (offlineAssetKeyId != null && offlineAssetKeyId.length > 0) {
                     drmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, offlineAssetKeyId);
                     return drmSessionManager;
                 }
             }
 
             return drmSessionManager;
+
             /* Sridhar - end */
 
             //Sridhar commented

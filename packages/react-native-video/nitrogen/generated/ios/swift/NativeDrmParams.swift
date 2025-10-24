@@ -18,7 +18,7 @@ public extension NativeDrmParams {
   /**
    * Create a new instance of `NativeDrmParams`.
    */
-  init(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Dictionary<String, String>?, multiSession: Bool?, getLicense: ((_ payload: OnGetLicensePayload) -> Promise<Promise<String>>)?) {
+  init(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Dictionary<String, String>?, multiSession: Bool?, getLicense: ((_ payload: OnGetLicensePayload) -> Promise<Promise<String>>)?, offlineKeyId: String?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = type {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -67,6 +67,12 @@ public extension NativeDrmParams {
           let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload(__unwrappedValue)
           return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload(__closureWrapper.toUnsafe())
         }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = offlineKeyId {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -270,6 +276,30 @@ public extension NativeDrmParams {
             let __closureWrapper = Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload(__unwrappedValue)
             return bridge.create_Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload(__closureWrapper.toUnsafe())
           }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var offlineKeyId: String? {
+    @inline(__always)
+    get {
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__offlineKeyId) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__offlineKeyId)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__offlineKeyId = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {
           return .init()
         }

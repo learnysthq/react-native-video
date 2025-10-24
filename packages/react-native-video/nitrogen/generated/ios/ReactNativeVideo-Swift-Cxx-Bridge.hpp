@@ -880,8 +880,14 @@ namespace margelo::nitro::video::bridge::swift {
    * Specialized version of `std::optional<CustomVideoMetadata>`.
    */
   using std__optional_CustomVideoMetadata_ = std::optional<CustomVideoMetadata>;
-  inline std::optional<CustomVideoMetadata> create_std__optional_CustomVideoMetadata_(const CustomVideoMetadata& value) {
+  inline std::optional<CustomVideoMetadata> create_std__optional_CustomVideoMetadata_(const CustomVideoMetadata& value) noexcept {
     return std::optional<CustomVideoMetadata>(value);
+  }
+  inline bool has_value_std__optional_CustomVideoMetadata_(const std::optional<CustomVideoMetadata>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline CustomVideoMetadata get_std__optional_CustomVideoMetadata_(const std::optional<CustomVideoMetadata>& optional) noexcept {
+    return *optional;
   }
   
   // pragma MARK: std::shared_ptr<Promise<VideoInformation>>

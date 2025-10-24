@@ -182,13 +182,7 @@ public extension NativeVideoConfig {
   var metadata: CustomVideoMetadata? {
     @inline(__always)
     get {
-      return { () -> CustomVideoMetadata? in
-        if let __unwrapped = self.__metadata.value {
-          return __unwrapped
-        } else {
-          return nil
-        }
-      }()
+      return self.__metadata.value
     }
     @inline(__always)
     set {

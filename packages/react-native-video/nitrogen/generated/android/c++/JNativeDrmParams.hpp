@@ -53,6 +53,8 @@ namespace margelo::nitro::video {
       jni::local_ref<jni::JBoolean> multiSession = this->getFieldValue(fieldMultiSession);
       static const auto fieldGetLicense = clazz->getField<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload::javaobject>("getLicense");
       jni::local_ref<JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload::javaobject> getLicense = this->getFieldValue(fieldGetLicense);
+      static const auto fieldOfflineKeyId = clazz->getField<jni::JString>("offlineKeyId");
+      jni::local_ref<jni::JString> offlineKeyId = this->getFieldValue(fieldOfflineKeyId);
       return NativeDrmParams(
         type != nullptr ? std::make_optional(type->toStdString()) : std::nullopt,
         licenseUrl != nullptr ? std::make_optional(licenseUrl->toStdString()) : std::nullopt,
@@ -77,7 +79,8 @@ namespace margelo::nitro::video {
               return getLicenseRef->invoke(payload);
             };
           }
-        }()) : std::nullopt
+        }()) : std::nullopt,
+        offlineKeyId != nullptr ? std::make_optional(offlineKeyId->toStdString()) : std::nullopt
       );
     }
 
@@ -100,7 +103,8 @@ namespace margelo::nitro::video {
           return __map;
         }() : nullptr,
         value.multiSession.has_value() ? jni::JBoolean::valueOf(value.multiSession.value()) : nullptr,
-        value.getLicense.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload_cxx::fromCpp(value.getLicense.value()) : nullptr
+        value.getLicense.has_value() ? JFunc_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload_cxx::fromCpp(value.getLicense.value()) : nullptr,
+        value.offlineKeyId.has_value() ? jni::make_jstring(value.offlineKeyId.value()) : nullptr
       );
     }
   };

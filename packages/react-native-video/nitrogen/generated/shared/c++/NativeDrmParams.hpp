@@ -42,10 +42,11 @@ namespace margelo::nitro::video {
     std::optional<std::unordered_map<std::string, std::string>> licenseHeaders     SWIFT_PRIVATE;
     std::optional<bool> multiSession     SWIFT_PRIVATE;
     std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const OnGetLicensePayload& /* payload */)>> getLicense     SWIFT_PRIVATE;
+    std::optional<std::string> offlineKeyId     SWIFT_PRIVATE;
 
   public:
     NativeDrmParams() = default;
-    explicit NativeDrmParams(std::optional<std::string> type, std::optional<std::string> licenseUrl, std::optional<std::string> certificateUrl, std::optional<std::string> contentId, std::optional<std::unordered_map<std::string, std::string>> licenseHeaders, std::optional<bool> multiSession, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const OnGetLicensePayload& /* payload */)>> getLicense): type(type), licenseUrl(licenseUrl), certificateUrl(certificateUrl), contentId(contentId), licenseHeaders(licenseHeaders), multiSession(multiSession), getLicense(getLicense) {}
+    explicit NativeDrmParams(std::optional<std::string> type, std::optional<std::string> licenseUrl, std::optional<std::string> certificateUrl, std::optional<std::string> contentId, std::optional<std::unordered_map<std::string, std::string>> licenseHeaders, std::optional<bool> multiSession, std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const OnGetLicensePayload& /* payload */)>> getLicense, std::optional<std::string> offlineKeyId): type(type), licenseUrl(licenseUrl), certificateUrl(certificateUrl), contentId(contentId), licenseHeaders(licenseHeaders), multiSession(multiSession), getLicense(getLicense), offlineKeyId(offlineKeyId) {}
   };
 
 } // namespace margelo::nitro::video
@@ -64,7 +65,8 @@ namespace margelo::nitro {
         JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "contentId")),
         JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::fromJSI(runtime, obj.getProperty(runtime, "licenseHeaders")),
         JSIConverter<std::optional<bool>>::fromJSI(runtime, obj.getProperty(runtime, "multiSession")),
-        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const margelo::nitro::video::OnGetLicensePayload&)>>>::fromJSI(runtime, obj.getProperty(runtime, "getLicense"))
+        JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const margelo::nitro::video::OnGetLicensePayload&)>>>::fromJSI(runtime, obj.getProperty(runtime, "getLicense")),
+        JSIConverter<std::optional<std::string>>::fromJSI(runtime, obj.getProperty(runtime, "offlineKeyId"))
       );
     }
     static inline jsi::Value toJSI(jsi::Runtime& runtime, const margelo::nitro::video::NativeDrmParams& arg) {
@@ -76,6 +78,7 @@ namespace margelo::nitro {
       obj.setProperty(runtime, "licenseHeaders", JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::toJSI(runtime, arg.licenseHeaders));
       obj.setProperty(runtime, "multiSession", JSIConverter<std::optional<bool>>::toJSI(runtime, arg.multiSession));
       obj.setProperty(runtime, "getLicense", JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const margelo::nitro::video::OnGetLicensePayload&)>>>::toJSI(runtime, arg.getLicense));
+      obj.setProperty(runtime, "offlineKeyId", JSIConverter<std::optional<std::string>>::toJSI(runtime, arg.offlineKeyId));
       return obj;
     }
     static inline bool canConvert(jsi::Runtime& runtime, const jsi::Value& value) {
@@ -90,6 +93,7 @@ namespace margelo::nitro {
       if (!JSIConverter<std::optional<std::unordered_map<std::string, std::string>>>::canConvert(runtime, obj.getProperty(runtime, "licenseHeaders"))) return false;
       if (!JSIConverter<std::optional<bool>>::canConvert(runtime, obj.getProperty(runtime, "multiSession"))) return false;
       if (!JSIConverter<std::optional<std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<std::string>>>>(const margelo::nitro::video::OnGetLicensePayload&)>>>::canConvert(runtime, obj.getProperty(runtime, "getLicense"))) return false;
+      if (!JSIConverter<std::optional<std::string>>::canConvert(runtime, obj.getProperty(runtime, "offlineKeyId"))) return false;
       return true;
     }
   };

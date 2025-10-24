@@ -125,11 +125,13 @@ dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-  implementation "androidx.media3:media3-common:1.4.1"
-  implementation "androidx.media3:media3-exoplayer:1.4.1"
-  implementation "androidx.media3:media3-datasource-okhttp:1.4.1"
+  //implementation "androidx.media3:media3-common:1.4.1"
+  //implementation "androidx.media3:media3-exoplayer:1.4.1"
+  //implementation "androidx.media3:media3-datasource-okhttp:1.4.1"
+    implementation project(':androidx.media3-lib-common')
+    implementation project(':androidx.media3-lib-exoplayer')
+    implementation project(':androidx.media3-lib-datasource-okhttp')
 
   implementation project(":react-native-nitro-modules")
   implementation project(":react-native-video")
 }
-

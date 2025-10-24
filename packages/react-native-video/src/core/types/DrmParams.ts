@@ -38,6 +38,12 @@ export interface DrmParams {
    * @platform iOS
    */
   getLicense?: (payload: OnGetLicensePayload) => Promise<string>;
+
+  /**
+   * The license URL for the DRM license request.
+   * @platform Android,ios
+   */
+  offlineKeyId?: string;
 }
 
 interface OnGetLicensePayload {

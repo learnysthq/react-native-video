@@ -85,7 +85,7 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
 
               // ---- Attach React Native cookie jar ----
               val container = client.cookieJar as CookieJarContainer
-              val handler = ForwardingCookieHandler(context)
+              val handler = ForwardingCookieHandler(context as ReactContext)
               container.setCookieJar(JavaNetCookieJar(handler))
 
               // ---- Build OkHttpDataSource.Factory for Media3 ----

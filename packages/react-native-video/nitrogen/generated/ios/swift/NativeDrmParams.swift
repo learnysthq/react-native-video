@@ -18,7 +18,7 @@ public extension NativeDrmParams {
   /**
    * Create a new instance of `NativeDrmParams`.
    */
-  init(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Dictionary<String, String>?, multiSession: Bool?, getLicense: ((_ payload: OnGetLicensePayload) -> Promise<Promise<String>>)?, offlineKeyId: String?) {
+  init(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Dictionary<String, String>?, multiSession: Bool?, getLicense: ((_ payload: OnGetLicensePayload) -> Promise<Promise<String>>)?, offlineKeyId: String?, fpsKeyPath: String?) {
     self.init({ () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = type {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
@@ -72,6 +72,12 @@ public extension NativeDrmParams {
       }
     }(), { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = offlineKeyId {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = fpsKeyPath {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
@@ -298,6 +304,30 @@ public extension NativeDrmParams {
     @inline(__always)
     set {
       self.__offlineKeyId = { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = newValue {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+  }
+  
+  var fpsKeyPath: String? {
+    @inline(__always)
+    get {
+      return { () -> String? in
+        if bridge.has_value_std__optional_std__string_(self.__fpsKeyPath) {
+          let __unwrapped = bridge.get_std__optional_std__string_(self.__fpsKeyPath)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__fpsKeyPath = { () -> bridge.std__optional_std__string_ in
         if let __unwrappedValue = newValue {
           return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
         } else {

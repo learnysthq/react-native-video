@@ -14,7 +14,19 @@ extension DRMManager: AVContentKeySessionDelegate {
     _: AVContentKeySession,
     didProvide keyRequest: AVContentKeyRequest
   ) {
-    handleContentKeyRequest(keyRequest: keyRequest)
+    // Check if this should be offline playback
+    if let fpsKeyPath = drmParams?.fpsKeyPath,
+       FileManager.default.fileExists(atPath: fpsKeyPath) {
+      // Request persistable key for offline playback
+      do {
+        try keyRequest.respondByRequestingPersistableContentKeyRequest()
+      } catch {
+        handleError(error: error, for: keyRequest)
+      }
+    } else {
+      // Online playback flow (existing)
+      handleContentKeyRequest(keyRequest: keyRequest)
+    }
   }
 
   func contentKeySession(
@@ -41,13 +53,34 @@ extension DRMManager: AVContentKeySessionDelegate {
     _: AVContentKeySession,
     didProvide keyRequest: AVPersistableContentKeyRequest
   ) {
-    handleError(
-      error: RuntimeError.error(
-        withMessage:
-          "Persistable content key requests are not supported in This Plugin. Please see Offline Video SDK if you need this functionality."
-      ),
-      for: keyRequest
-    )
+    // Load offline key from file
+    guard let fpsKeyPath = drmParams?.fpsKeyPath else {
+      handleError(
+        error: RuntimeError.error(
+          withMessage:
+            "fpsKeyPath is required for persistable content key requests. Please provide fpsKeyPath in DRM config or use online playback."
+        ),
+        for: keyRequest
+      )
+      return
+    }
+
+    do {
+      // Read offline key data from file
+      let keyData = try Data(contentsOf: URL(fileURLWithPath: fpsKeyPath))
+
+      // Create response with the offline key
+      let keyResponse = AVContentKeyResponse(
+        fairPlayStreamingKeyResponseData: keyData
+      )
+
+      // Process the key response
+      keyRequest.processContentKeyResponse(keyResponse)
+
+      print("[ReactNativeVideo] DRMManager: Successfully loaded offline FairPlay key from \(fpsKeyPath)")
+    } catch {
+      handleError(error: error, for: keyRequest)
+    }
   }
 
   func contentKeySession(

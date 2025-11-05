@@ -44,11 +44,14 @@ data class NativeDrmParams
     val getLicense: Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload?,
     @DoNotStrip
     @Keep
-    val offlineKeyId: String?
+    val offlineKeyId: String?,
+    @DoNotStrip
+    @Keep
+    val fpsKeyPath: String?
   ) {
   /**
    * Initialize a new instance of `NativeDrmParams` from Kotlin.
    */
-  constructor(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Map<String, String>?, multiSession: Boolean?, getLicense: ((payload: OnGetLicensePayload) -> Promise<Promise<String>>)?, offlineKeyId: String?)
-       : this(type, licenseUrl, certificateUrl, contentId, licenseHeaders, multiSession, getLicense?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload_java(it) }, offlineKeyId)
+  constructor(type: String?, licenseUrl: String?, certificateUrl: String?, contentId: String?, licenseHeaders: Map<String, String>?, multiSession: Boolean?, getLicense: ((payload: OnGetLicensePayload) -> Promise<Promise<String>>)?, offlineKeyId: String?, fpsKeyPath: String?)
+       : this(type, licenseUrl, certificateUrl, contentId, licenseHeaders, multiSession, getLicense?.let { Func_std__shared_ptr_Promise_std__shared_ptr_Promise_std__string_____OnGetLicensePayload_java(it) }, offlineKeyId, fpsKeyPath)
 }

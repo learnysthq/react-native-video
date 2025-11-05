@@ -44,6 +44,12 @@ export interface DrmParams {
    * @platform Android,ios
    */
   offlineKeyId?: string;
+  /**
+   * Local file path to offline FairPlay key (persistable content key)
+   * When provided, the player will load the key from this file instead of requesting from license server
+   * @platform iOS, visionOS
+   */
+  fpsKeyPath?: string;
 }
 
 interface OnGetLicensePayload {

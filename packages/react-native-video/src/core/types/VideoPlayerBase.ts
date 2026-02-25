@@ -1,6 +1,8 @@
+import type { AudioTrack } from './AudioTrack';
 import type { IgnoreSilentSwitchMode } from './IgnoreSilentSwitchMode';
 import type { MixAudioMode } from './MixAudioMode';
 import type { TextTrack } from './TextTrack';
+import type { VideoTrack } from './VideoTrack';
 import type { VideoPlayerSourceBase } from './VideoPlayerSourceBase';
 import type { VideoPlayerStatus } from './VideoPlayerStatus';
 
@@ -171,4 +173,16 @@ export interface VideoPlayerBase {
    * @returns The currently selected text track, or undefined if none is selected
    */
   readonly selectedTrack?: TextTrack;
+
+  /**
+   * Get all available video tracks for the current source.
+   * @returns Array of available video tracks
+   */
+  getAvailableVideoTracks(): VideoTrack[];
+
+  /**
+   * Get all available audio tracks for the current source.
+   * @returns Array of available audio tracks
+   */
+  getAvailableAudioTracks(): AudioTrack[];
 }

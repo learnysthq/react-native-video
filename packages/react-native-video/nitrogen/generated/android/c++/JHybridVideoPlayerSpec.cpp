@@ -19,6 +19,10 @@ namespace margelo::nitro::video { enum class MixAudioMode; }
 namespace margelo::nitro::video { enum class IgnoreSilentSwitchMode; }
 // Forward declaration of `TextTrack` to properly resolve imports.
 namespace margelo::nitro::video { struct TextTrack; }
+// Forward declaration of `VideoTrack` to properly resolve imports.
+namespace margelo::nitro::video { struct VideoTrack; }
+// Forward declaration of `AudioTrack` to properly resolve imports.
+namespace margelo::nitro::video { struct AudioTrack; }
 
 #include <memory>
 #include "HybridVideoPlayerSourceSpec.hpp"
@@ -32,8 +36,12 @@ namespace margelo::nitro::video { struct TextTrack; }
 #include "IgnoreSilentSwitchMode.hpp"
 #include "JIgnoreSilentSwitchMode.hpp"
 #include "TextTrack.hpp"
+#include "VideoTrack.hpp"
+#include "AudioTrack.hpp"
 #include <optional>
 #include "JTextTrack.hpp"
+#include "JVideoTrack.hpp"
+#include "JAudioTrack.hpp"
 #include <string>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
@@ -262,6 +270,34 @@ namespace margelo::nitro::video {
   void JHybridVideoPlayerSpec::seekTo(double time) {
     static const auto method = javaClassStatic()->getMethod<void(double /* time */)>("seekTo");
     method(_javaPart, time);
+  }
+  std::vector<VideoTrack> JHybridVideoPlayerSpec::getAvailableVideoTracks() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JVideoTrack>>()>("getAvailableVideoTracks");
+    auto __result = method(_javaPart);
+    return [&]() {
+      size_t __size = __result->size();
+      std::vector<VideoTrack> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __result->getElement(__i);
+        __vector.push_back(__element->toCpp());
+      }
+      return __vector;
+    }();
+  }
+  std::vector<AudioTrack> JHybridVideoPlayerSpec::getAvailableAudioTracks() {
+    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JAudioTrack>>()>("getAvailableAudioTracks");
+    auto __result = method(_javaPart);
+    return [&]() {
+      size_t __size = __result->size();
+      std::vector<AudioTrack> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __result->getElement(__i);
+        __vector.push_back(__element->toCpp());
+      }
+      return __vector;
+    }();
   }
 
 } // namespace margelo::nitro::video

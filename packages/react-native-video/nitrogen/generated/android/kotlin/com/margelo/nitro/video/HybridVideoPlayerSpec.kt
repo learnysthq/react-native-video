@@ -129,10 +129,18 @@ abstract class HybridVideoPlayerSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun getAvailableTextTracks(): Array<TextTrack>
-  
+
   @DoNotStrip
   @Keep
   abstract fun selectTextTrack(textTrack: TextTrack?): Unit
+
+  @DoNotStrip
+  @Keep
+  abstract fun getAvailableVideoTracks(): Array<VideoTrack>
+
+  @DoNotStrip
+  @Keep
+  abstract fun getAvailableAudioTracks(): Array<AudioTrack>
   
   @DoNotStrip
   @Keep

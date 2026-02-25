@@ -33,6 +33,7 @@ import com.twg.video.core.recivers.AudioBecomingNoisyReceiver
 import com.twg.video.core.services.playback.VideoPlaybackService
 import com.twg.video.core.services.playback.VideoPlaybackServiceConnection
 import com.twg.video.core.utils.TextTrackUtils
+import com.twg.video.core.utils.VideoTrackUtils
 import com.twg.video.core.utils.Threading.mainThreadProperty
 import com.twg.video.core.utils.Threading.runOnMainThread
 import com.twg.video.core.utils.Threading.runOnMainThreadSync
@@ -603,4 +604,16 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
 
   override val selectedTrack: TextTrack?
     get() = TextTrackUtils.getSelectedTrack(player, source)
+
+  // MARK: - Video Track Management
+
+  override fun getAvailableVideoTracks(): Array<VideoTrack> {
+    return VideoTrackUtils.getAvailableVideoTracks(player)
+  }
+
+  // MARK: - Audio Track Management
+
+  override fun getAvailableAudioTracks(): Array<AudioTrack> {
+    return VideoTrackUtils.getAvailableAudioTracks(player)
+  }
 }

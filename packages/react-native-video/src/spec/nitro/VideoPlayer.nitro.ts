@@ -1,5 +1,7 @@
 import type { HybridObject } from 'react-native-nitro-modules';
+import type { AudioTrack } from '../../core/types/AudioTrack';
 import type { TextTrack } from '../../core/types/TextTrack';
+import type { VideoTrack } from '../../core/types/VideoTrack';
 import type { VideoPlayerBase } from '../../core/types/VideoPlayerBase';
 import type { VideoPlayerEventEmitter } from './VideoPlayerEventEmitter.nitro';
 import type { VideoPlayerSource } from './VideoPlayerSource.nitro';
@@ -36,6 +38,18 @@ export interface VideoPlayer
    * @param textTrack - Text track to select, or null to unselect current track
    */
   selectTextTrack(textTrack: TextTrack | null): void;
+
+  /**
+   * Get all available video tracks for the current source.
+   * @returns Array of available video tracks
+   */
+  getAvailableVideoTracks(): VideoTrack[];
+
+  /**
+   * Get all available audio tracks for the current source.
+   * @returns Array of available audio tracks
+   */
+  getAvailableAudioTracks(): AudioTrack[];
 }
 
 export interface VideoPlayerFactory

@@ -4,7 +4,9 @@ import { type VideoPlayer as VideoPlayerImpl } from '../spec/nitro/VideoPlayer.n
 import type { VideoPlayerSource } from '../spec/nitro/VideoPlayerSource.nitro';
 import type { IgnoreSilentSwitchMode } from './types/IgnoreSilentSwitchMode';
 import type { MixAudioMode } from './types/MixAudioMode';
+import type { AudioTrack } from './types/AudioTrack';
 import type { TextTrack } from './types/TextTrack';
+import type { VideoTrack } from './types/VideoTrack';
 import type { NoAutocomplete } from './types/Utils';
 import type { VideoConfig, VideoSource } from './types/VideoConfig';
 import {
@@ -280,6 +282,26 @@ class VideoPlayer extends VideoPlayerEvents implements VideoPlayerBase {
   // Selected Text Track
   get selectedTrack(): TextTrack | undefined {
     return this.player.selectedTrack;
+  }
+
+  // Video Track Management
+  getAvailableVideoTracks(): VideoTrack[] {
+    try {
+      return this.player.getAvailableVideoTracks();
+    } catch (error) {
+      this.throwError(error);
+      return [];
+    }
+  }
+
+  // Audio Track Management
+  getAvailableAudioTracks(): AudioTrack[] {
+    try {
+      return this.player.getAvailableAudioTracks();
+    } catch (error) {
+      this.throwError(error);
+      return [];
+    }
   }
 }
 

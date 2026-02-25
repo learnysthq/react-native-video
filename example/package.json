@@ -1,0 +1,41 @@
+{
+  "name": "react-native-video-example",
+  "version": "7.0.0-alpha.6",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "lint": "eslint .",
+    "typecheck": "tsc",
+    "start": "react-native start --client-logs",
+    "bundle-install": "bundle install",
+    "pods": "cd ios && pod install && cd .."
+  },
+  "dependencies": {
+    "@react-native-community/slider": "^4.5.6",
+    "react": "18.3.1",
+    "react-native": "^0.77.0",
+    "react-native-nitro-modules": "^0.29.0",
+    "react-native-video": "*",
+    "@react-native-video/drm": "*"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "15.0.1",
+    "@react-native-community/cli-platform-android": "15.0.1",
+    "@react-native-community/cli-platform-ios": "15.0.1",
+    "@react-native/babel-preset": "^0.77.0",
+    "@react-native/eslint-config": "^0.77.0",
+    "@react-native/metro-config": "^0.77.0",
+    "@react-native/typescript-config": "^0.77.0",
+    "@types/react": "^18.2.44",
+    "eslint": "^8.51.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

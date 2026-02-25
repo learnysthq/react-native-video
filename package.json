@@ -1,38 +1,116 @@
 {
-    "name": "react-native-video",
-    "version": "6.0.0-alpha.1",
-    "description": "A <Video /> element for react-native",
-    "main": "Video.js",
-    "license": "MIT",
-    "author": "Community Contributors",
-    "repository": {
-        "type": "git",
-        "url": "git@github.com:react-native-video/react-native-video.git"
-    },
-    "devDependencies": {
-        "@react-native-community/eslint-config": "^0.0.5",
-        "eslint": "^6.5.1",
-        "react": "16.9.0",
-        "react-native": "0.61.5",
-        "react-native-windows": "^0.61.0-0"
-    },
-    "dependencies": {
-        "deprecated-react-native-prop-types": "^2.2.0",
-        "keymirror": "^0.1.1",
-        "prop-types": "^15.7.2"
-    },
-    "scripts": {
-        "lint": "yarn eslint .",
-        "xbasic": "yarn --cwd examples/basic"
-    },
-    "files": [
-        "android",
-        "ios",
-        "windows",
-        "FilterType.js",
-        "DRMType.js",
-        "TextTrackType.js",
-        "VideoResizeMode.js",
-        "react-native-video.podspec"
+  "name": "react-native-video-monorepo",
+  "packageManager": "bun@1.1.42",
+  "version": "7.0.0-alpha.6",
+  "private": true,
+  "repository": "https://github.com/TheWidlarzGroup/react-native-video",
+  "author": "TheWidlarzGroup <hi@thewidlarzgroup.com> (https://github.com/TheWidlarzGroup)",
+  "workspaces": [
+    "packages/react-native-video",
+    "packages/drm-plugin",
+    "example",
+    "docs"
+  ],
+  "scripts": {
+    "build": "bun --filter=\"./packages/**\" run build",
+    "specs": "bun --filter=\"./packages/**\" specs",
+    "lint": "bun --filter=\"**\" lint",
+    "typecheck": "bun --filter=\"**\" typecheck",
+    "clean": "git clean -xdf",
+    "react-native-video": "bun run --cwd packages/react-native-video",
+    "drm-plugin": "bun run --cwd packages/drm-plugin",
+    "example": "bun run --cwd example",
+    "postinstall": "patch-package --patch-dir example/patches",
+    "release:github": "release-it --preRelease alpha",
+    "release": "./scripts/release.sh"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^17.0.2",
+    "@eslint/js": "^9.10.0",
+    "@evilmartians/lefthook": "^1.5.0",
+    "@react-native/eslint-config": "^0.77.0",
+    "@release-it-plugins/workspaces": "^4.2.0",
+    "@release-it/bumper": "^6.0.1",
+    "@release-it/conventional-changelog": "^8.0.2",
+    "@tsconfig/react-native": "^2.0.2",
+    "@types/eslint__js": "^8.42.3",
+    "@types/react": "^18.2.44",
+    "commitlint": "^17.0.2",
+    "eslint": "^8.51.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "patch-package": "^8.0.0",
+    "prettier": "^3.0.3",
+    "react": "18.3.1",
+    "react-native": "^0.77.0",
+    "release-it": "^17.10.0",
+    "typescript": "^5.2.2",
+    "typescript-eslint": "^8.13.0"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
     ]
+  },
+  "release-it": {
+    "npm": {
+      "publish": false
+    },
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}",
+      "requireCleanWorkingDir": false
+    },
+    "github": {
+      "release": true
+    },
+    "hooks": {
+      "before:release": "bun run --cwd packages/react-native-video build && bun run --cwd packages/drm-plugin build",
+      "before:git": "bun install && bun example bundle-install && bun example pods && git add bun.lock && git add example/ios/Podfile.lock"
+    },
+    "plugins": {
+      "@release-it/bumper": {
+        "out": [
+          {
+            "file": "packages/react-native-video/package.json",
+            "path": "version"
+          },
+          {
+            "file": "packages/drm-plugin/package.json",
+            "path": "version"
+          },
+          {
+            "file": "example/package.json",
+            "path": "version"
+          }
+        ]
+      },
+      "@release-it/conventional-changelog": {
+        "preset": {
+          "name": "conventionalcommits",
+          "types": [
+            {
+              "type": "feat",
+              "section": "Features ✨"
+            },
+            {
+              "type": "fix",
+              "section": "Bug Fixes 🐛"
+            },
+            {
+              "type": "refactor",
+              "section": "Code Refactoring 🛠"
+            },
+            {
+              "type": "chore(deps)",
+              "section": "Dependency Upgrades 📦"
+            },
+            {
+              "type": "docs",
+              "section": "Documentation 📚"
+            }
+          ]
+        }
+      }
+    }
+  }
 }

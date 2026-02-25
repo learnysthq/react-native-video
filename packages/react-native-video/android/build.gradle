@@ -1,0 +1,260 @@
+buildscript {
+  // Buildscript is evaluated before everything else so we can't use getExtOrDefault
+  def kotlin_version = rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["RNVideo_kotlinVersion"]
+  def minKotlin_version = project.properties["RNVideo_minKotlinVersion"]
+
+  def androidx_version = rootProject.ext.has('androidxActivityVersion') ? rootProject.ext.get('androidxActivityVersion') : project.properties['RNVideo_androidxActivityVersion']
+  def minAndroidx_version = project.properties["RNVideo_androidxActivityVersion"]
+
+  def isVersionAtLeast = { version, minVersion ->
+    def (major, minor, patch) = version.tokenize('.')
+    def (minMajor, minMinor, minPatch) = minVersion.tokenize('.')
+
+    // major version is greater
+    if (major.toInteger() > minMajor.toInteger()) return true
+
+    // major version is equal, minor version is greater
+    if (major.toInteger() == minMajor.toInteger() && minor.toInteger() > minMinor.toInteger()) return true
+
+    // major version is equal, minor version is equal, patch version is greater
+    if (major.toInteger() == minMajor.toInteger() && minor.toInteger() == minMinor.toInteger() && patch.toInteger() >= minPatch.toInteger()) return true
+
+    return false
+  }
+
+  repositories {
+    google()
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath "com.android.tools.build:gradle:7.2.1"
+    // noinspection DifferentKotlinGradleVersion
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+  }
+
+  ext {
+    if (!isVersionAtLeast(kotlin_version, minKotlin_version)) {
+      throw new GradleException("Kotlin version must be at least $minKotlin_version (current: $kotlin_version)")
+    }
+
+    if (!isVersionAtLeast(androidx_version, minAndroidx_version)) {
+      throw new GradleException("AndroidX version must be at least $minAndroidx_version (current: $androidx_version)")
+    }
+  }
+}
+
+def reactNativeArchitectures() {
+  def value = rootProject.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
+def isNewArchitectureEnabled() {
+  return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
+}
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+apply from: '../nitrogen/generated/android/ReactNativeVideo+autolinking.gradle'
+apply from: './fix-prefab.gradle'
+
+if (isNewArchitectureEnabled()) {
+  apply plugin: "com.facebook.react"
+}
+
+def getExtOrDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties["RNVideo_" + name]
+}
+
+def getExtOrIntegerDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["RNVideo_" + name]).toInteger()
+}
+
+def supportsNamespace() {
+  def parsed = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')
+  def major = parsed[0].toInteger()
+  def minor = parsed[1].toInteger()
+
+  // Namespace support was added in 7.3.0
+  return (major == 7 && minor >= 3) || major >= 8
+}
+
+def ExoplayerDependenciesList = [
+  "useExoplayerDash",
+  "useExoplayerHls",
+]
+
+def ExoplayerDependencies = ExoplayerDependenciesList.collectEntries { property ->
+  [(property): getExtOrDefault(property)?.toBoolean() ?: false]
+}
+
+// Print Configuration
+println "[ReactNativeVideo] Exoplayer Dependencies Configuration:"
+ExoplayerDependenciesList.each { propertyName ->
+  def propertyValue = ExoplayerDependencies[propertyName]
+  println "$propertyName: $propertyValue"
+}
+
+android {
+  if (supportsNamespace()) {
+    namespace "com.twg.video"
+
+    sourceSets {
+      main {
+        manifest.srcFile "src/main/AndroidManifestNew.xml"
+      }
+    }
+  }
+
+  ndkVersion getExtOrDefault("ndkVersion")
+  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+
+    buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+    buildConfigField "boolean", "USE_EXOPLAYER_DASH", ExoplayerDependencies.useExoplayerDash.toString()
+    buildConfigField "boolean", "USE_EXOPLAYER_HLS", ExoplayerDependencies.useExoplayerHls.toString()
+
+    externalNativeBuild {
+      cmake {
+        cppFlags "-O2 -frtti -fexceptions -Wall -fstack-protector-all"
+        arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        abiFilters (*reactNativeArchitectures())
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  packagingOptions {
+    excludes = [
+            "META-INF",
+            "META-INF/**",
+            "**/libc++_shared.so",
+            "**/libfbjni.so",
+            "**/libjsi.so",
+            "**/libfolly_json.so",
+            "**/libfolly_runtime.so",
+            "**/libglog.so",
+            "**/libhermes.so",
+            "**/libhermes-executor-debug.so",
+            "**/libhermes_executor.so",
+            "**/libreactnativejni.so",
+            "**/libturbomodulejsijni.so",
+            "**/libreact_nativemodule_core.so",
+            "**/libjscexecutor.so",
+            "**/libreactnative.so"
+    ]
+  }
+
+  buildFeatures {
+    buildConfig true
+    prefab true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  lintOptions {
+    disable "GradleCompatible"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  sourceSets {
+    main {
+      if (!isNewArchitectureEnabled()) {
+        java.srcDirs += ["src/paper/java"]
+      }
+
+      if (!ExoplayerDependencies.useExoplayerDash) {
+        java.srcDirs += ["src/stubs/dash"]
+      }
+
+      if (!ExoplayerDependencies.useExoplayerHls) {
+        java.srcDirs += ["src/stubs/hls"]
+      }
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+  google()
+}
+
+def kotlin_version = getExtOrDefault("kotlinVersion")
+def media3_version = getExtOrDefault("media3Version")
+def androidxCore_version = getExtOrDefault("androidxCoreVersion")
+def androidxActivity_version = getExtOrDefault("androidxActivityVersion")
+
+dependencies {
+  // For < 0.71, this will be from the local maven repo
+  // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
+  //noinspection GradleDynamicVersion
+  implementation "com.facebook.react:react-native:+"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+  // Add a dependency on NitroModules
+  implementation project(":react-native-nitro-modules")
+
+  implementation "androidx.core:core-ktx:$androidxCore_version"
+  implementation "androidx.activity:activity-ktx:$androidxActivity_version"
+
+  // For media playback using ExoPlayer
+  //implementation "androidx.media3:media3-exoplayer:$media3_version"
+  implementation project(':androidx.media3-lib-exoplayer')
+
+  // Common functionality used across multiple media libraries
+  //implementation "androidx.media3:media3-common:$media3_version"
+  implementation project(':androidx.media3-lib-common')
+
+  // For building media playback UIs
+  //implementation "androidx.media3:media3-ui:$media3_version"
+  implementation project(':androidx.media3-lib-ui')
+
+  // Common functionality for loading data
+  //implementation "androidx.media3:media3-datasource:$media3_version"
+  implementation project(':androidx.media3-lib-datasource')
+
+  // For loading data using the OkHttp network stack
+  //implementation "androidx.media3:media3-datasource-okhttp:$media3_version"
+  implementation project(':androidx.media3-lib-datasource-okhttp')
+
+  // For Media Session
+  //implementation "androidx.media3:media3-session:$media3_version"
+  implementation project(':androidx.media3-lib-session')
+
+
+  if (ExoplayerDependencies.useExoplayerDash) {
+    //implementation "androidx.media3:media3-exoplayer-dash:$media3_version"
+    implementation project(':androidx.media3-lib-exoplayer-dash')
+
+  }
+
+  if (ExoplayerDependencies.useExoplayerHls) {
+    //implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation project(':androidx.media3-lib-exoplayer-hls')
+
+  }
+}
+
+if (isNewArchitectureEnabled()) {
+  react {
+    jsRootDir = file("../src/spec/fabric")
+    libraryName = "RNCVideoView"
+    codegenJavaPackageName = "com.twg.video"
+  }
+}

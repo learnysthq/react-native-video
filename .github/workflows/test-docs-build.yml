@@ -1,0 +1,27 @@
+name: Test Documentation Build
+
+on:
+  pull_request:
+    branches:
+      - v7
+    paths:
+      # Update on workflow change
+      - '.github/workflows/test-docs-build.yml'
+      # Update on docs change
+      - 'docs/**'
+      # Update on code change (Api Reference)
+      - 'packages/react-native-video/src/**'
+
+jobs:
+  test-docs-deploy:
+    name: Test Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-bun
+
+      - name: Test build website
+        run: bun run --cwd docs build

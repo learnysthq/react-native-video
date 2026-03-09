@@ -31,6 +31,11 @@ import java.net.Proxy
 import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 
 class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
@@ -78,10 +83,27 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
               }
 
               // ---- Build custom OkHttpClient with cookie + logging ----
-              val client = OkHttpClient.Builder()
+              val isLocalhostHttps = source.uri.startsWith("https://localhost") || source.uri.startsWith("https://127.0.0.1")
+
+              val clientBuilder = OkHttpClient.Builder()
                   .proxySelector(proxySelector)
                   .cookieJar(com.facebook.react.modules.network.ReactCookieJarContainer())
-                  .build()
+
+              // Trust self-signed certs for localhost proxy
+              if (isLocalhostHttps) {
+                  val trustAllManager = object : X509TrustManager {
+                      override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                      override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                      override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                  }
+                  val sslContext = SSLContext.getInstance("TLS")
+                  sslContext.init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
+                  clientBuilder
+                      .sslSocketFactory(sslContext.socketFactory, trustAllManager)
+                      .hostnameVerifier { hostname, _ -> hostname == "localhost" || hostname == "127.0.0.1" }
+              }
+
+              val client = clientBuilder.build()
 
               // ---- Attach React Native cookie jar ----
               val container = client.cookieJar as CookieJarContainer
@@ -134,10 +156,16 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
     val drmSessionManager = builder.build(drmCallback)
 
     // ✅ handle offline keyset (same as old ExoPlayer)
+    // Native DRM module returns format "L3#<base64(keySetIdBytes)>" — strip the prefix before decoding
     val offlineKeySetId = drmParams.offlineKeyId // or pass explicitly
 
     if (!offlineKeySetId.isNullOrEmpty()) {
-      val offlineAssetKeyId = Base64.decode(offlineKeySetId, Base64.DEFAULT)
+      val keyIdBase64 = if (offlineKeySetId.contains("#")) {
+        offlineKeySetId.substringAfter("#")
+      } else {
+        offlineKeySetId
+      }
+      val offlineAssetKeyId = Base64.decode(keyIdBase64, Base64.DEFAULT)
       if (offlineAssetKeyId.isNotEmpty()) {
         drmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, offlineAssetKeyId)
       }

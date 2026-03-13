@@ -1,5 +1,6 @@
 package com.margelo.nitro.video
 
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -15,6 +16,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.extractor.metadata.emsg.EventMessage
 import androidx.media3.extractor.metadata.id3.Id3Frame
@@ -85,6 +87,9 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   // Text track selection state
   private var selectedExternalTrackIndex: Int? = null
 
+  // L3 fallback: retry once with software DRM if secure decoder crashes
+  private var hasRetriedWithL3 = false
+
   private companion object {
     const val PROGRESS_UPDATE_INTERVAL_MS = 250L
     private const val TAG = "HybridVideoPlayer"
@@ -93,6 +98,16 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     private const val DEFAULT_BUFFER_FOR_PLAYBACK_DURATION_MS = 1000
     private const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_DURATION_MS = 2000
     private const val DEFAULT_BACK_BUFFER_DURATION_MS = 0
+
+    fun isMtkDevice(): Boolean {
+      val hw = Build.HARDWARE.lowercase()
+      if (hw.startsWith("mt")) return true
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val soc = Build.SOC_MODEL.lowercase()
+        if (soc.startsWith("mt")) return true
+      }
+      return false
+    }
   }
 
   override var status: VideoPlayerStatus = VideoPlayerStatus.IDLE
@@ -248,6 +263,14 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       .setLooper(Looper.getMainLooper())
       .setRenderersFactory(renderersFactory)
       .build()
+
+    // Cap to 720p on MTK chipsets — budget MediaTek secure decoders
+    // crash on 1080p with SVP memory allocation failures (old ignore1080pTrack fix)
+    if (isMtkDevice()) {
+      player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+        .setMaxVideoSize(1280, 720)
+        .build()
+    }
 
     loadedWithSource = true
 
@@ -509,6 +532,12 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     }
 
     override fun onPlayerError(error: PlaybackException) {
+      if (!hasRetriedWithL3 && isSecureDecoderError(error)) {
+        hasRetriedWithL3 = true
+        Log.w(TAG, "Secure decoder failed, retrying with L3 software DRM", error)
+        retryWithL3()
+        return
+      }
       status = VideoPlayerStatus.ERROR
       stopProgressUpdates()
     }
@@ -585,6 +614,27 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     override fun onTracksChanged(tracks: Tracks) {
       super.onTracksChanged(tracks)
     }
+  }
+
+  // MARK: - L3 Fallback
+
+  private fun isSecureDecoderError(error: PlaybackException): Boolean {
+    var cause: Throwable? = error.cause
+    while (cause != null) {
+      if (cause is MediaCodecRenderer.DecoderException) {
+        val decoderName = cause.codecInfo?.name ?: ""
+        if (decoderName.contains(".secure", ignoreCase = true)) return true
+      }
+      cause = cause.cause
+    }
+    return false
+  }
+
+  private fun retryWithL3() {
+    val hybridSource = source as? HybridVideoPlayerSource ?: return
+    hybridSource.rebuildWithL3()
+    player.setMediaSource(hybridSource.mediaSource)
+    player.prepare()
   }
 
   // MARK: - Text Track Management

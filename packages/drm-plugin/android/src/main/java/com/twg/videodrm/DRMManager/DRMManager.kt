@@ -16,6 +16,7 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.video.NativeDrmParams
 import com.twg.video.core.player.buildHttpDataSourceFactory
 import com.twg.video.core.plugins.NativeVideoPlayerSource
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import java.util.UUID
 import android.util.Log
 import android.util.Base64
@@ -39,7 +40,7 @@ import javax.net.ssl.X509TrustManager
 
 
 class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
-  private var hasDrmFailed = false
+  override var forceL3: Boolean = false
   private val context: Context
     get() {
       return NitroModules.applicationContext ?: throw Error("Context is not found")
@@ -147,11 +148,17 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
       drmCallback.setKeyRequestProperty(key, value)
     }
 
-    if (hasDrmFailed) mediaDrm.setPropertyString("securityLevel", "L3")
+    // When L1 secure decoder fails (e.g. MTK SVP crash), retry with L3
+    if (forceL3) {
+      mediaDrm.setPropertyString("securityLevel", "L3")
+    }
 
     val builder = DefaultDrmSessionManager.Builder()
       .setUuidAndExoMediaDrmProvider(uuid) { mediaDrm }
       .setMultiSession(drmParams.multiSession == true)
+      // Retry key/provisioning requests up to 3 times — matches old ExoPlayer
+      // patch where onKeysError retried provisioning before giving up
+      .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(3))
 
     val drmSessionManager = builder.build(drmCallback)
 

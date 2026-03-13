@@ -51,6 +51,26 @@ class HybridVideoPlayerSource(): HybridVideoPlayerSourceSpec() {
     }
   }
 
+  @UnstableApi
+  fun rebuildWithL3() {
+    val drm = config.drm ?: return
+    val manager = drmManager ?: return
+
+    manager.forceL3 = true
+    drmSessionManager = manager.buildDrmSessionManager(drm)
+
+    val overriddenSource = PluginsRegistry.shared.overrideSource(this)
+    this.mediaItem = createMediaItemFromVideoConfig(overriddenSource)
+
+    NitroModules.applicationContext?.let {
+      this.mediaSource = buildMediaSource(
+        context = it,
+        source = overriddenSource,
+        mediaItem
+      )
+    } ?: throw LibraryError.ApplicationContextNotFound
+  }
+
   override fun getAssetInformationAsync(): Promise<VideoInformation> {
     return Promise.async {
       return@async VideoInformationUtils.fromUri(uri, config.headers ?: emptyMap())

@@ -10,6 +10,8 @@ import java.util.UUID
 
 @OptIn(UnstableApi::class)
 interface DRMManagerSpec {
+  var forceL3: Boolean
+
   fun buildDrmSessionManager(drmParams: NativeDrmParams): DrmSessionManager {
     val drmScheme = drmParams.type ?: "widevine"
     val drmUuid = Util.getDrmUuid(drmScheme)

@@ -16,6 +16,7 @@ import com.margelo.nitro.NitroModules
 import com.margelo.nitro.video.NativeDrmParams
 import com.twg.video.core.player.buildHttpDataSourceFactory
 import com.twg.video.core.plugins.NativeVideoPlayerSource
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import java.util.UUID
 import android.util.Log
 import android.util.Base64
@@ -31,10 +32,15 @@ import java.net.Proxy
 import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 
 class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
-  private var hasDrmFailed = false
+  override var forceL3: Boolean = false
   private val context: Context
     get() {
       return NitroModules.applicationContext ?: throw Error("Context is not found")
@@ -78,10 +84,27 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
               }
 
               // ---- Build custom OkHttpClient with cookie + logging ----
-              val client = OkHttpClient.Builder()
+              val isLocalhostHttps = source.uri.startsWith("https://localhost") || source.uri.startsWith("https://127.0.0.1")
+
+              val clientBuilder = OkHttpClient.Builder()
                   .proxySelector(proxySelector)
                   .cookieJar(com.facebook.react.modules.network.ReactCookieJarContainer())
-                  .build()
+
+              // Trust self-signed certs for localhost proxy
+              if (isLocalhostHttps) {
+                  val trustAllManager = object : X509TrustManager {
+                      override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                      override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                      override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                  }
+                  val sslContext = SSLContext.getInstance("TLS")
+                  sslContext.init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
+                  clientBuilder
+                      .sslSocketFactory(sslContext.socketFactory, trustAllManager)
+                      .hostnameVerifier { hostname, _ -> hostname == "localhost" || hostname == "127.0.0.1" }
+              }
+
+              val client = clientBuilder.build()
 
               // ---- Attach React Native cookie jar ----
               val container = client.cookieJar as CookieJarContainer
@@ -125,19 +148,31 @@ class DRMManager(val source: NativeVideoPlayerSource) : DRMManagerSpec {
       drmCallback.setKeyRequestProperty(key, value)
     }
 
-    if (hasDrmFailed) mediaDrm.setPropertyString("securityLevel", "L3")
+    // When L1 secure decoder fails (e.g. MTK SVP crash), retry with L3
+    if (forceL3) {
+      mediaDrm.setPropertyString("securityLevel", "L3")
+    }
 
     val builder = DefaultDrmSessionManager.Builder()
       .setUuidAndExoMediaDrmProvider(uuid) { mediaDrm }
       .setMultiSession(drmParams.multiSession == true)
+      // Retry key/provisioning requests up to 3 times — matches old ExoPlayer
+      // patch where onKeysError retried provisioning before giving up
+      .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(3))
 
     val drmSessionManager = builder.build(drmCallback)
 
     // ✅ handle offline keyset (same as old ExoPlayer)
+    // Native DRM module returns format "L3#<base64(keySetIdBytes)>" — strip the prefix before decoding
     val offlineKeySetId = drmParams.offlineKeyId // or pass explicitly
 
     if (!offlineKeySetId.isNullOrEmpty()) {
-      val offlineAssetKeyId = Base64.decode(offlineKeySetId, Base64.DEFAULT)
+      val keyIdBase64 = if (offlineKeySetId.contains("#")) {
+        offlineKeySetId.substringAfter("#")
+      } else {
+        offlineKeySetId
+      }
+      val offlineAssetKeyId = Base64.decode(keyIdBase64, Base64.DEFAULT)
       if (offlineAssetKeyId.isNotEmpty()) {
         drmSessionManager.setMode(DefaultDrmSessionManager.MODE_QUERY, offlineAssetKeyId)
       }

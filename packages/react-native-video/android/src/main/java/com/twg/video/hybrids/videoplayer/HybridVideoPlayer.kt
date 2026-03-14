@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.extractor.metadata.emsg.EventMessage
 import androidx.media3.extractor.metadata.id3.Id3Frame
@@ -621,7 +621,7 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   private fun isSecureDecoderError(error: PlaybackException): Boolean {
     var cause: Throwable? = error.cause
     while (cause != null) {
-      if (cause is MediaCodecRenderer.DecoderException) {
+      if (cause is MediaCodecDecoderException) {
         val decoderName = cause.codecInfo?.name ?: ""
         if (decoderName.contains(".secure", ignoreCase = true)) return true
       }

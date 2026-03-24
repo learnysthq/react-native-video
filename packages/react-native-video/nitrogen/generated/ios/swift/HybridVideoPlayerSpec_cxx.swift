@@ -325,7 +325,35 @@ open class HybridVideoPlayerSpec_cxx {
       return bridge.create_Result_void_(__exceptionPtr)
     }
   }
-  
+
+  @inline(__always)
+  public final func getAvailableVideoTracks() -> bridge.Result_std__vector_VideoTrack__ {
+    do {
+      let __result = try self.__implementation.getAvailableVideoTracks()
+      let __resultCpp = __result.withUnsafeBufferPointer { __pointer -> bridge.std__vector_VideoTrack_ in
+        return bridge.copy_std__vector_VideoTrack_(__pointer.baseAddress!, __result.count)
+      }
+      return bridge.create_Result_std__vector_VideoTrack__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__vector_VideoTrack__(__exceptionPtr)
+    }
+  }
+
+  @inline(__always)
+  public final func getAvailableAudioTracks() -> bridge.Result_std__vector_AudioTrack__ {
+    do {
+      let __result = try self.__implementation.getAvailableAudioTracks()
+      let __resultCpp = __result.withUnsafeBufferPointer { __pointer -> bridge.std__vector_AudioTrack_ in
+        return bridge.copy_std__vector_AudioTrack_(__pointer.baseAddress!, __result.count)
+      }
+      return bridge.create_Result_std__vector_AudioTrack__(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__vector_AudioTrack__(__exceptionPtr)
+    }
+  }
+
   @inline(__always)
   public final func initialize() -> bridge.Result_std__shared_ptr_Promise_void___ {
     do {

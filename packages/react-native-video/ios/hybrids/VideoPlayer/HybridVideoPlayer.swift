@@ -325,6 +325,80 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
     return playerItem
   }
 
+  // MARK: - Video Track Management
+
+  func getAvailableVideoTracks() throws -> [VideoTrack] {
+    guard let currentItem = player.currentItem else {
+      return []
+    }
+
+    var tracks: [VideoTrack] = []
+
+    if let asset = currentItem.asset as? AVURLAsset {
+      let videoTracks = asset.tracks(withMediaType: .video)
+      for (index, track) in videoTracks.enumerated() {
+        let trackId = "\(track.trackID)"
+        let naturalSize = track.naturalSize
+        let bitrate = Double(track.estimatedDataRate)
+        // AVPlayer doesn't expose per-track selection for video the same way as text,
+        // so we mark the first track as selected (it's the active one)
+        let isSelected = index == 0
+
+        tracks.append(
+          VideoTrack(
+            id: trackId,
+            width: Double(naturalSize.width),
+            height: Double(naturalSize.height),
+            bitrate: bitrate,
+            selected: isSelected
+          )
+        )
+      }
+    }
+
+    return tracks
+  }
+
+  // MARK: - Audio Track Management
+
+  func getAvailableAudioTracks() throws -> [AudioTrack] {
+    guard let currentItem = player.currentItem else {
+      return []
+    }
+
+    var tracks: [AudioTrack] = []
+
+    if let mediaSelection = currentItem.asset.mediaSelectionGroup(
+      forMediaCharacteristic: .audible
+    ) {
+      for (index, option) in mediaSelection.options.enumerated() {
+        let isSelected =
+          currentItem.currentMediaSelection.selectedMediaOption(
+            in: mediaSelection
+          ) == option
+
+        let label =
+          option.commonMetadata.first(where: { $0.commonKey == .commonKeyTitle })?
+            .stringValue
+          ?? option.displayName
+
+        let trackId = "audio-\(index)"
+
+        tracks.append(
+          AudioTrack(
+            id: trackId,
+            label: label,
+            language: option.locale?.identifier,
+            bitrate: 0,
+            selected: isSelected
+          )
+        )
+      }
+    }
+
+    return tracks
+  }
+
   // MARK: - Text Track Management
 
   func getAvailableTextTracks() throws -> [TextTrack] {

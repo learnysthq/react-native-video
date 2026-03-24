@@ -32,6 +32,8 @@ public protocol HybridVideoPlayerSpec_protocol: HybridObject {
   func replaceSourceAsync(source: (any HybridVideoPlayerSourceSpec)?) throws -> Promise<Void>
   func getAvailableTextTracks() throws -> [TextTrack]
   func selectTextTrack(textTrack: TextTrack?) throws -> Void
+  func getAvailableVideoTracks() throws -> [VideoTrack]
+  func getAvailableAudioTracks() throws -> [AudioTrack]
   func initialize() throws -> Promise<Void>
   func preload() throws -> Promise<Void>
   func play() throws -> Void

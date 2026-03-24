@@ -100,6 +100,8 @@ namespace ReactNativeVideo { class HybridVideoViewViewManagerSpec_cxx; }
 #include "SourceType.hpp"
 #include "SubtitleType.hpp"
 #include "TextTrack.hpp"
+#include "VideoTrack.hpp"
+#include "AudioTrack.hpp"
 #include "TimedMetadata.hpp"
 #include "TimedMetadataObject.hpp"
 #include "VideoInformation.hpp"
@@ -293,6 +295,48 @@ namespace margelo::nitro::video::bridge::swift {
   }
   inline Result_std__vector_TextTrack__ create_Result_std__vector_TextTrack__(const std::exception_ptr& error) noexcept {
     return Result<std::vector<TextTrack>>::withError(error);
+  }
+
+  // pragma MARK: std::vector<VideoTrack>
+  /**
+   * Specialized version of `std::vector<VideoTrack>`.
+   */
+  using std__vector_VideoTrack_ = std::vector<VideoTrack>;
+  inline std::vector<VideoTrack> copy_std__vector_VideoTrack_(const VideoTrack* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
+    return margelo::nitro::FastVectorCopy<VideoTrack>(data, size);
+  }
+  inline const VideoTrack* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_VideoTrack_(const std::vector<VideoTrack>& vector) noexcept {
+    return vector.data();
+  }
+
+  // pragma MARK: Result<std::vector<VideoTrack>>
+  using Result_std__vector_VideoTrack__ = Result<std::vector<VideoTrack>>;
+  inline Result_std__vector_VideoTrack__ create_Result_std__vector_VideoTrack__(const std::vector<VideoTrack>& value) noexcept {
+    return Result<std::vector<VideoTrack>>::withValue(value);
+  }
+  inline Result_std__vector_VideoTrack__ create_Result_std__vector_VideoTrack__(const std::exception_ptr& error) noexcept {
+    return Result<std::vector<VideoTrack>>::withError(error);
+  }
+
+  // pragma MARK: std::vector<AudioTrack>
+  /**
+   * Specialized version of `std::vector<AudioTrack>`.
+   */
+  using std__vector_AudioTrack_ = std::vector<AudioTrack>;
+  inline std::vector<AudioTrack> copy_std__vector_AudioTrack_(const AudioTrack* CONTIGUOUS_MEMORY NON_NULL data, size_t size) noexcept {
+    return margelo::nitro::FastVectorCopy<AudioTrack>(data, size);
+  }
+  inline const AudioTrack* CONTIGUOUS_MEMORY NON_NULL get_data_std__vector_AudioTrack_(const std::vector<AudioTrack>& vector) noexcept {
+    return vector.data();
+  }
+
+  // pragma MARK: Result<std::vector<AudioTrack>>
+  using Result_std__vector_AudioTrack__ = Result<std::vector<AudioTrack>>;
+  inline Result_std__vector_AudioTrack__ create_Result_std__vector_AudioTrack__(const std::vector<AudioTrack>& value) noexcept {
+    return Result<std::vector<AudioTrack>>::withValue(value);
+  }
+  inline Result_std__vector_AudioTrack__ create_Result_std__vector_AudioTrack__(const std::exception_ptr& error) noexcept {
+    return Result<std::vector<AudioTrack>>::withError(error);
   }
   
   // pragma MARK: Result<void>

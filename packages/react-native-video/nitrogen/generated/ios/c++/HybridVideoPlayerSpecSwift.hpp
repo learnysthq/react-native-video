@@ -32,6 +32,8 @@ namespace margelo::nitro::video { struct TextTrack; }
 #include "MixAudioMode.hpp"
 #include "IgnoreSilentSwitchMode.hpp"
 #include "TextTrack.hpp"
+#include "VideoTrack.hpp"
+#include "AudioTrack.hpp"
 #include <optional>
 #include <string>
 #include <NitroModules/Promise.hpp>
@@ -182,6 +184,22 @@ namespace margelo::nitro::video {
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }
+    }
+    inline std::vector<VideoTrack> getAvailableVideoTracks() override {
+      auto __result = _swiftPart.getAvailableVideoTracks();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::vector<AudioTrack> getAvailableAudioTracks() override {
+      auto __result = _swiftPart.getAvailableAudioTracks();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
     }
     inline std::shared_ptr<Promise<void>> initialize() override {
       auto __result = _swiftPart.initialize();

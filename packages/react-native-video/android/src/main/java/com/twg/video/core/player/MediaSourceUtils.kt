@@ -28,7 +28,16 @@ fun buildMediaSource(context: Context, source: HybridVideoPlayerSource, mediaIte
   // Explanation:
   // 1. Remove query params from uri to avoid getting false extension
   // 2. Get extension from uri
-  val type = Util.inferContentType(uri)
+  //
+  // Learnyst: ".lds" is the V6 server's offline DASH manifest extension. ExoPlayer's
+  // Util.inferContentType would return CONTENT_TYPE_OTHER and fall through to the
+  // progressive extractors, which can't read the DASH bytes. Force DASH for .lds URIs.
+  val rawType = Util.inferContentType(uri)
+  val type = if (rawType == C.CONTENT_TYPE_OTHER && uri.path?.endsWith(".lds") == true) {
+    C.CONTENT_TYPE_DASH
+  } else {
+    rawType
+  }
   val dataSourceFactory = PluginsRegistry.shared.overrideMediaDataSourceFactory(
     source,
     buildBaseDataSourceFactory(context, source)

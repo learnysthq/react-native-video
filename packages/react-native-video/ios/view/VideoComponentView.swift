@@ -132,21 +132,31 @@ import AVKit
     }
   }
   
-  public func configureAVPlayerViewController(with player: AVPlayer) {
+  public func configureAVPlayerViewController(with player: AVPlayer, attempt: Int = 0) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self, let playerView = self.playerView else { return }
+
+      let controller = AVPlayerViewController()
+      // `view` is `UIView!`; AVKit has returned nil here in production, which trapped on the
+      // implicit unwrap. Read it as an optional and retry on a later main-queue pass.
+      guard let controllerView = controller.view as UIView? else {
+        if attempt < 3 {
+          self.configureAVPlayerViewController(with: player, attempt: attempt + 1)
+        }
+        return
+      }
+
       // Remove previous controller if any
       self.playerViewController?.willMove(toParent: nil)
-      self.playerViewController?.view.removeFromSuperview()
+      self.playerViewController?.viewIfLoaded?.removeFromSuperview()
       self.playerViewController?.removeFromParent()
-      
-      let controller = AVPlayerViewController()
+
       controller.player = player
       controller.showsPlaybackControls = controls
       controller.videoGravity = self.resizeMode.toVideoGravity()
-      controller.view.frame = playerView.bounds
-      controller.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      controller.view.backgroundColor = .clear
+      controllerView.frame = playerView.bounds
+      controllerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      controllerView.backgroundColor = .clear
       
       // We manage this manually in NowPlayingInfoCenterManager
       controller.updatesNowPlayingInfoCenter = false
@@ -160,7 +170,7 @@ import AVKit
       // Find nearest UIViewController
       if let parentVC = self.findViewController() {
         parentVC.addChild(controller)
-        playerView.addSubview(controller.view)
+        playerView.addSubview(controllerView)
         controller.didMove(toParent: parentVC)
         self.playerViewController = controller
       }
@@ -204,7 +214,7 @@ import AVKit
     super.layoutSubviews()
 
     // Update the frame of the playerViewController's view when the view's layout changes
-    playerViewController?.view.frame = playerView?.bounds ?? .zero
+    playerViewController?.viewIfLoaded?.frame = playerView?.bounds ?? .zero
     playerViewController?.contentOverlayView?.frame = playerView?.bounds ?? .zero
     for subview in playerViewController?.contentOverlayView?.subviews ?? [] {
       subview.frame = playerView?.bounds ?? .zero

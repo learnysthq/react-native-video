@@ -321,6 +321,13 @@ class NowPlayingInfoCenterManager {
       if rate == 0 && self.currentPlayer == player {
         self.findNewCurrentPlayer()
       }
+
+      // The periodic time observer only fires while playback advances, so a pause never
+      // reached the now-playing info: it kept rate 1 with no audio, and iOS dropped the
+      // controls once the app was suspended. Publish the rate / position on every change.
+      if self.currentPlayer == player {
+        self.updateNowPlayingInfo()
+      }
     }
   }
 

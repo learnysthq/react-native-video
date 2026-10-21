@@ -322,7 +322,46 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
       playerItem = AVPlayerItem(asset: asset)
     }
 
+    applyNowPlayingMetadata(to: playerItem, metadata: source.config.metadata)
+
     return playerItem
+  }
+
+  /// Attaches `source.metadata` (title / artist / description / artwork) to the item so
+  /// NowPlayingInfoCenterManager shows it on the lock screen and Control Center. Without
+  /// it the app needed a second now-playing writer (MusicControl), and iOS dropped the
+  /// controls once the app was paused and suspended.
+  private func applyNowPlayingMetadata(to playerItem: AVPlayerItem, metadata: CustomVideoMetadata?) {
+    guard let metadata else { return }
+
+    func textItem(_ identifier: AVMetadataIdentifier, _ value: String?) -> AVMetadataItem? {
+      guard let value, !value.isEmpty else { return nil }
+      let item = AVMutableMetadataItem()
+      item.identifier = identifier
+      item.value = value as NSString
+      item.extendedLanguageTag = "und"
+      return item
+    }
+
+    playerItem.externalMetadata = [
+      textItem(.commonIdentifierTitle, metadata.title),
+      textItem(.commonIdentifierArtist, metadata.artist),
+      textItem(.commonIdentifierDescription, metadata.description),
+    ].compactMap { $0 }
+
+    guard let imageUri = metadata.imageUri, let url = URL(string: imageUri) else { return }
+    URLSession.shared.dataTask(with: url) { [weak playerItem] data, _, _ in
+      guard let data, !data.isEmpty else { return }
+      DispatchQueue.main.async {
+        guard let playerItem else { return }
+        let artwork = AVMutableMetadataItem()
+        artwork.identifier = .commonIdentifierArtwork
+        artwork.value = data as NSData
+        artwork.extendedLanguageTag = "und"
+        playerItem.externalMetadata.append(artwork)
+        NowPlayingInfoCenterManager.shared.updateNowPlayingInfo()
+      }
+    }.resume()
   }
 
   // MARK: - Video Track Management

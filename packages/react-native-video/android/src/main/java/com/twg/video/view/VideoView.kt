@@ -198,6 +198,8 @@ class VideoView @JvmOverloads constructor(
     // https://github.com/facebook/react-native/blob/d19afc73f5048f81656d0b4424232ce6d69a6368/ReactAndroid/src/main/java/com/facebook/react/views/toolbar/ReactToolbar.java#L166
     // This fix issue where exoplayer views where wrong sizes
     // Without it, controls, PictureInPicture, content fills, etc. don't work
+    // Coalesce: many requestLayout() calls in one frame should queue a single pass.
+    removeCallbacks(layoutRunnable)
     post(layoutRunnable)
   }
 

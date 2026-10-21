@@ -197,8 +197,8 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
 
   override var mixAudioMode: MixAudioMode = MixAudioMode.AUTO
     set(value) {
-      VideoManager.audioFocusManager.requestAudioFocusUpdate()
       field = value
+      VideoManager.audioFocusManager.requestAudioFocusUpdate()
     }
 
   // iOS only property
@@ -525,6 +525,10 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       if (isPlaying) {
         VideoManager.setLastPlayedPlayer(this@HybridVideoPlayer)
         startProgressUpdates()
+        // Hold audio focus while playing. Without it Android never tells us about an
+        // incoming call (AUDIOFOCUS_LOSS_TRANSIENT): the call just mutes media and the
+        // video keeps playing. AudioFocusManager pauses players on that loss.
+        VideoManager.audioFocusManager.requestAudioFocusUpdate()
       } else {
         if (player.playbackState == Player.STATE_ENDED || player.playbackState == Player.STATE_IDLE) {
           stopProgressUpdates()

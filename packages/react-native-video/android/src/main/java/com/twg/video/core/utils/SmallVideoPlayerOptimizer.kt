@@ -104,17 +104,23 @@ object SmallVideoPlayerOptimizer {
             else -> secondarySize
           }
 
+          // Only write when something changes: setLayoutParams always calls requestLayout(),
+          // which re-posts VideoView.layoutRunnable / fires the global-layout listener, which
+          // calls applyOptimizations() again — an endless main-thread loop (100% CPU while the
+          // player is mounted, even paused or in background).
           val params = child.layoutParams
-          params.width = buttonSize
-          params.height = buttonSize
-          child.layoutParams = params
+          if (params.width != buttonSize || params.height != buttonSize) {
+            params.width = buttonSize
+            params.height = buttonSize
+            child.layoutParams = params
+          }
 
           // Hide less essential buttons on small video players
           when (child.id) {
             androidx.media3.ui.R.id.exo_shuffle,
             androidx.media3.ui.R.id.exo_repeat_toggle,
             androidx.media3.ui.R.id.exo_vr -> {
-              child.visibility = View.GONE
+              if (child.visibility != View.GONE) child.visibility = View.GONE
             }
           }
         }
@@ -133,8 +139,11 @@ object SmallVideoPlayerOptimizer {
     progressContainer?.let { progress ->
       val params = progress.layoutParams as? ViewGroup.MarginLayoutParams
       params?.let {
-        it.height = (4 * context.resources.displayMetrics.density).toInt()
-        progress.layoutParams = it
+        val height = (4 * context.resources.displayMetrics.density).toInt()
+        if (it.height != height) {
+          it.height = height
+          progress.layoutParams = it
+        }
       }
     }
   }

@@ -65,6 +65,9 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   }
 
   lateinit var player: ExoPlayer
+  val isPlayerInitialized: Boolean get() = ::player.isInitialized
+  // Null until the (posted) initialisation has built the ExoPlayer; safe for external callers
+  val playerOrNull: ExoPlayer? get() = if (isPlayerInitialized) player else null
   var loadedWithSource = false
   private var currentPlayerView: WeakReference<PlayerView>? = null
 
@@ -398,6 +401,7 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     VideoManager.addViewToPlayer(videoView, this)
 
     runOnMainThreadSync {
+      if (!::player.isInitialized) return@runOnMainThreadSync
       PlayerView.switchTargetView(player, currentPlayerView?.get(), videoView.playerView)
       currentPlayerView = WeakReference(videoView.playerView)
     }

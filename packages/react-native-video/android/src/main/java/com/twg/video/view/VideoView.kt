@@ -508,6 +508,8 @@ class VideoView @JvmOverloads constructor(
     // Re-register after a detach/attach cycle (unregisterView runs on detach)
     if (nitroId != -1 && VideoManager.getVideoViewWeakReferenceByNitroId(nitroId)?.get() !== this) {
       VideoManager.registerView(this)
+      // Give JS a chance to rebind (setupViewManager is idempotent) after a swallowed view/not-found
+      onNitroIdChange?.let { it(nitroId) }
     }
     hybridPlayer?.movePlayerToVideoView(this)
     setupPipHelper()

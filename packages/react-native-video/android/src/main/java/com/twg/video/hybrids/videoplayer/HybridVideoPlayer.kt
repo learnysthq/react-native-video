@@ -65,6 +65,9 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   }
 
   lateinit var player: ExoPlayer
+  val isPlayerInitialized: Boolean get() = ::player.isInitialized
+  // Null until the (posted) initialisation has built the ExoPlayer; safe for external callers
+  val playerOrNull: ExoPlayer? get() = if (isPlayerInitialized) player else null
   var loadedWithSource = false
   private var currentPlayerView: WeakReference<PlayerView>? = null
 
@@ -223,7 +226,7 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   override var playWhenInactive: Boolean = false
 
   override var isPlaying: Boolean by mainThreadProperty(
-    get = { player.isPlaying == true }
+    get = { ::player.isInitialized && player.isPlaying }
   )
 
   private fun initializePlayer() {
@@ -290,6 +293,8 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     return Promise.async {
       return@async runOnMainThreadSync {
         initializePlayer()
+        // Re-target any VideoView recorded while the player was not yet built.
+        VideoManager.maybePassPlayerToView(this)
         player.prepare()
       }
     }
@@ -305,6 +310,10 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       } else {
         player = ExoPlayer.Builder(context).build()
       }
+
+      // A VideoView may have attached before this posted init ran; movePlayerToVideoView
+      // recorded it but skipped the switch, so re-target it now.
+      VideoManager.maybePassPlayerToView(this)
     }
 
     VideoManager.registerPlayer(this)
@@ -312,12 +321,14 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
 
   override fun play() {
     runOnMainThread {
+      if (!::player.isInitialized) return@runOnMainThread
       player.play()
     }
   }
 
   override fun pause() {
     runOnMainThread {
+      if (!::player.isInitialized) return@runOnMainThread
       player.pause()
     }
   }
@@ -355,6 +366,8 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       runOnMainThreadSync {
         if (!loadedWithSource) {
           initializePlayer()
+          // Re-target any VideoView onto the newly built player.
+          VideoManager.maybePassPlayerToView(this)
         }
 
         if (player.playbackState != Player.STATE_IDLE) {
@@ -375,6 +388,10 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     stopProgressUpdates()
     loadedWithSource = false
     runOnMainThread {
+      if (!::player.isInitialized) {
+        status = VideoPlayerStatus.IDLE
+        return@runOnMainThread
+      }
       player.removeListener(playerListener)
       player.removeAnalyticsListener(analyticsListener)
       player.release() // Release player
@@ -392,6 +409,7 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     VideoManager.addViewToPlayer(videoView, this)
 
     runOnMainThreadSync {
+      if (!::player.isInitialized) return@runOnMainThreadSync
       PlayerView.switchTargetView(player, currentPlayerView?.get(), videoView.playerView)
       currentPlayerView = WeakReference(videoView.playerView)
     }

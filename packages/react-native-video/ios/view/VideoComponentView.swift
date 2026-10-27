@@ -106,6 +106,21 @@ import AVKit
   
   deinit {
     VideoManager.shared.unregister(view: self)
+
+    // Detach the AVPlayer from the controller when the view is destroyed, so AVKit's KVO on
+    // it is removed before the player's item is replaced or released (BODHI-APP-HB family).
+    // This lives in deinit rather than willMove(toSuperview: nil) because under Fabric this
+    // view is the wrapper's contentView and never receives willMove(toSuperview: nil) on
+    // unmount; the wrapper (shouldBeRecycled == NO) releases it on dealloc. willMove(toWindow:)
+    // is deliberately not used: it fires on screen navigation and would detach video from a
+    // lesson pushed under another screen.
+    // This ends any active PiP session for this view (the app does not use PiP today).
+    // A Fabric-owned UIView deinits on main; hop without blocking if that ever changes.
+    if Thread.isMainThread {
+      playerViewController?.player = nil
+    } else if let controller = playerViewController {
+      DispatchQueue.main.async { controller.player = nil }
+    }
   }
   
   @objc public required init?(coder: NSCoder) {
@@ -146,7 +161,9 @@ import AVKit
         return
       }
 
-      // Remove previous controller if any
+      // Remove previous controller if any. Detach its player first so AVKit tears down its
+      // AVPlayer KVO before the controller leaves the hierarchy.
+      self.playerViewController?.player = nil
       self.playerViewController?.willMove(toParent: nil)
       self.playerViewController?.viewIfLoaded?.removeFromSuperview()
       self.playerViewController?.removeFromParent()

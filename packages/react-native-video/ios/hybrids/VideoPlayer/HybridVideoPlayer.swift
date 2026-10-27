@@ -24,12 +24,36 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
 
   var playerItem: AVPlayerItem? {
     didSet {
+      // A new item makes the player live again, so the next release() must tear it down.
+      // Covers every reuse path (initialize, preload, replaceSourceAsync) after a release.
+      if playerItem != nil {
+        released = false
+      }
       if let bufferConfig = source.config.bufferConfig {
         playerItem?.setBufferConfig(config: bufferConfig)
       }
     }
   }
   var playerObserver: VideoPlayerObserver?
+
+  /// Set once `release()` has torn the player down, so a second call (dispose, then deinit)
+  /// is a no-op. Cleared when a new `playerItem` is assigned.
+  private var released = false
+
+  /// Set by `dispose()` before it releases, so teardown does not emit `onStatusChange`
+  /// through an event emitter that is being destroyed with this object.
+  private var isDisposing = false
+
+  /// AVKit observes `AVPlayer.currentItem` (via AVPlayerViewController) on the main thread;
+  /// swapping the item off main races its KVO teardown (NSInternalInconsistencyException).
+  /// Runs `block` inline when already on main (no deadlock), else enqueues it on main.
+  private static func runOnMain(_ block: @escaping () -> Void) {
+    if Thread.isMainThread {
+      block()
+    } else {
+      DispatchQueue.main.async(execute: block)
+    }
+  }
 
   init(source: (any HybridVideoPlayerSourceSpec)) throws {
     self.source = source
@@ -44,8 +68,11 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
     
     Task {
       if source.config.initializeOnCreation == true {
-        self.playerItem = try await initializePlayerItem()
-        self.player.replaceCurrentItem(with: self.playerItem)
+        let playerItem = try await initializePlayerItem()
+        self.playerItem = playerItem
+        await MainActor.run {
+          self.player.replaceCurrentItem(with: playerItem)
+        }
       }
     }
 
@@ -53,7 +80,11 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   }
 
   deinit {
-    release()
+    if !released {
+      // Deallocating: do not emit onStatusChange from the teardown below.
+      isDisposing = true
+      release()
+    }
   }
 
   // MARK: - Hybrid Impl
@@ -62,7 +93,7 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
 
   var status: VideoPlayerStatus = .idle {
     didSet {
-      if status != oldValue {
+      if status != oldValue && !isDisposing {
         eventEmitter.onStatusChange(status)
       }
     }
@@ -178,14 +209,25 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
         return
       }
       
-      self.playerItem = try await self.initializePlayerItem()
-      self.player.replaceCurrentItem(with: self.playerItem)
+      let playerItem = try await self.initializePlayerItem()
+      self.playerItem = playerItem
+      await MainActor.run {
+        self.player.replaceCurrentItem(with: playerItem)
+      }
     }
   }
 
   func release() {
+    guard !released else { return }
+    released = true
+
     NowPlayingInfoCenterManager.shared.removePlayer(player: player)
-    self.player.replaceCurrentItem(with: nil)
+    // Capture the AVPlayer, not self: release() also runs from deinit, where an escaping
+    // closure must not retain self.
+    let player = self.player
+    HybridVideoPlayer.runOnMain {
+      player.replaceCurrentItem(with: nil)
+    }
     self.playerItem = nil
 
     if let source = self.source as? HybridVideoPlayerSource {
@@ -220,7 +262,9 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
         let playerItem = try await self.initializePlayerItem()
         self.playerItem = playerItem
 
-        self.player.replaceCurrentItem(with: playerItem)
+        await MainActor.run {
+          self.player.replaceCurrentItem(with: playerItem)
+        }
         promise.resolve(withResult: ())
       } catch {
         promise.reject(withError: error)
@@ -279,8 +323,11 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
       }
 
       self.source = source
-      self.playerItem = try await self.initializePlayerItem()
-      self.player.replaceCurrentItem(with: self.playerItem)
+      let playerItem = try await self.initializePlayerItem()
+      self.playerItem = playerItem
+      await MainActor.run {
+        self.player.replaceCurrentItem(with: playerItem)
+      }
       NowPlayingInfoCenterManager.shared.updateNowPlayingInfo()
       promise.resolve(withResult: ())
     }
@@ -584,6 +631,7 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   // MARK: - Memory Management
 
   func dispose() {
+    isDisposing = true
     release()
   }
 

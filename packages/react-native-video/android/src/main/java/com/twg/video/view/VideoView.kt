@@ -63,8 +63,8 @@ class VideoView @JvmOverloads constructor(
     set(value) {
       if (field == -1) {
         post {
-          onNitroIdChange?.let { it(value) }
           VideoManager.registerView(this)
+          onNitroIdChange?.let { it(value) }
         }
       }
 
@@ -103,7 +103,7 @@ class VideoView @JvmOverloads constructor(
         removeView(playerView)
         playerView.player = null
         playerView = createPlayerView()
-        playerView.player = hybridPlayer?.player
+        playerView.player = hybridPlayer?.playerOrNull
         addView(playerView)
       }
     }
@@ -505,6 +505,12 @@ class VideoView @JvmOverloads constructor(
   }
 
   override fun onAttachedToWindow() {
+    // Re-register after a detach/attach cycle (unregisterView runs on detach)
+    if (nitroId != -1 && VideoManager.getVideoViewWeakReferenceByNitroId(nitroId)?.get() !== this) {
+      VideoManager.registerView(this)
+      // Give JS a chance to rebind (setupViewManager is idempotent) after a swallowed view/not-found
+      onNitroIdChange?.let { it(nitroId) }
+    }
     hybridPlayer?.movePlayerToVideoView(this)
     setupPipHelper()
     super.onAttachedToWindow()

@@ -223,7 +223,7 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
   override var playWhenInactive: Boolean = false
 
   override var isPlaying: Boolean by mainThreadProperty(
-    get = { player.isPlaying == true }
+    get = { ::player.isInitialized && player.isPlaying }
   )
 
   private fun initializePlayer() {
@@ -312,12 +312,14 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
 
   override fun play() {
     runOnMainThread {
+      if (!::player.isInitialized) return@runOnMainThread
       player.play()
     }
   }
 
   override fun pause() {
     runOnMainThread {
+      if (!::player.isInitialized) return@runOnMainThread
       player.pause()
     }
   }
@@ -375,6 +377,10 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     stopProgressUpdates()
     loadedWithSource = false
     runOnMainThread {
+      if (!::player.isInitialized) {
+        status = VideoPlayerStatus.IDLE
+        return@runOnMainThread
+      }
       player.removeListener(playerListener)
       player.removeAnalyticsListener(analyticsListener)
       player.release() // Release player

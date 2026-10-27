@@ -199,7 +199,8 @@ import AVKit
 
       // Detach the AVPlayer from the controller on main before the view is torn down, so
       // AVKit's KVO on it is removed before the player's item is replaced or released.
-      // UIKit calls this on main; runs inline.
+      // UIKit calls this on main; runs inline. This intentionally ends any active PiP
+      // session for this view (the app does not use PiP today).
       playerViewController?.player = nil
       
       // We want to disable this when view is about to unmount

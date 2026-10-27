@@ -24,6 +24,11 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
 
   var playerItem: AVPlayerItem? {
     didSet {
+      // A new item makes the player live again, so the next release() must tear it down.
+      // Covers every reuse path (initialize, preload, replaceSourceAsync) after a release.
+      if playerItem != nil {
+        released = false
+      }
       if let bufferConfig = source.config.bufferConfig {
         playerItem?.setBufferConfig(config: bufferConfig)
       }
@@ -32,7 +37,7 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   var playerObserver: VideoPlayerObserver?
 
   /// Set once `release()` has torn the player down, so a second call (dispose, then deinit)
-  /// is a no-op. Cleared when `replaceSourceAsync` installs a new source.
+  /// is a no-op. Cleared when a new `playerItem` is assigned.
   private var released = false
 
   /// Set by `dispose()` before it releases, so teardown does not emit `onStatusChange`
@@ -76,6 +81,8 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
 
   deinit {
     if !released {
+      // Deallocating: do not emit onStatusChange from the teardown below.
+      isDisposing = true
       release()
     }
   }
@@ -316,7 +323,6 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
       }
 
       self.source = source
-      self.released = false
       let playerItem = try await self.initializePlayerItem()
       self.playerItem = playerItem
       await MainActor.run {

@@ -46,7 +46,8 @@ class VideoPlaybackService : MediaSessionService() {
     }
     sourceActivity = from
 
-    val builder = MediaSession.Builder(this, player.player)
+    val exoPlayer = player.playerOrNull ?: return
+    val builder = MediaSession.Builder(this, exoPlayer)
       .setId("RNVideoPlaybackService_" + player.hashCode())
       .setCallback(VideoPlaybackCallback())
 

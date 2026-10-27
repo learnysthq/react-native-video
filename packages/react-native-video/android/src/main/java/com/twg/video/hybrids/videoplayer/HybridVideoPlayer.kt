@@ -293,6 +293,8 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
     return Promise.async {
       return@async runOnMainThreadSync {
         initializePlayer()
+        // Re-target any VideoView recorded while the player was not yet built.
+        VideoManager.maybePassPlayerToView(this)
         player.prepare()
       }
     }
@@ -308,6 +310,10 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       } else {
         player = ExoPlayer.Builder(context).build()
       }
+
+      // A VideoView may have attached before this posted init ran; movePlayerToVideoView
+      // recorded it but skipped the switch, so re-target it now.
+      VideoManager.maybePassPlayerToView(this)
     }
 
     VideoManager.registerPlayer(this)
@@ -360,6 +366,8 @@ class HybridVideoPlayer() : HybridVideoPlayerSpec() {
       runOnMainThreadSync {
         if (!loadedWithSource) {
           initializePlayer()
+          // Re-target any VideoView onto the newly built player.
+          VideoManager.maybePassPlayerToView(this)
         }
 
         if (player.playbackState != Player.STATE_IDLE) {

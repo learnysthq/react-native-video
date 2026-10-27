@@ -103,7 +103,7 @@ class VideoView @JvmOverloads constructor(
         removeView(playerView)
         playerView.player = null
         playerView = createPlayerView()
-        playerView.player = hybridPlayer?.player
+        playerView.player = hybridPlayer?.playerOrNull
         addView(playerView)
       }
     }

@@ -199,6 +199,7 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 def media3_version = getExtOrDefault("media3Version")
 def androidxCore_version = getExtOrDefault("androidxCoreVersion")
 def androidxActivity_version = getExtOrDefault("androidxActivityVersion")
+def androidxLifecycle_version = getExtOrDefault("androidxLifecycleVersion")
 
 dependencies {
   // For < 0.71, this will be from the local maven repo
@@ -214,7 +215,7 @@ dependencies {
   implementation "androidx.activity:activity-ktx:$androidxActivity_version"
 
   // ProcessLifecycleOwner: only start the playback service while the app is in the foreground
-  implementation "androidx.lifecycle:lifecycle-process:2.6.2"
+  implementation "androidx.lifecycle:lifecycle-process:$androidxLifecycle_version"
 
   // For media playback using ExoPlayer
   //implementation "androidx.media3:media3-exoplayer:$media3_version"

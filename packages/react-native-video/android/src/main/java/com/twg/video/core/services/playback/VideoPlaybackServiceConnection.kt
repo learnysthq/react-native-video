@@ -19,12 +19,14 @@ class VideoPlaybackServiceConnection (private val player: WeakReference<HybridVi
     val player = player.get() ?: return
 
     try {
+      // Assign before the activity check so stopService -> stopIfNoPlayers can still run
+      // (and clear the placeholder notification) when no player ever registers.
+      serviceBinder = binder as? VideoPlaybackServiceBinder
+
       val activity = NitroModules.Companion.applicationContext?.currentActivity ?: run {
         Log.e("VideoPlaybackServiceConnection", "Activity is null")
         return
       }
-
-      serviceBinder = binder as? VideoPlaybackServiceBinder
       // Only register when the player actually needs background service/notification
       if (player.playInBackground || player.showNotificationControls) {
         serviceBinder?.service?.registerPlayer(player, activity.javaClass)

@@ -31,6 +31,21 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   }
   var playerObserver: VideoPlayerObserver?
 
+  /// Set once `release()` has torn the player down, so a second call (dispose, then deinit)
+  /// is a no-op. Cleared when `replaceSourceAsync` installs a new source.
+  private var released = false
+
+  /// AVKit observes `AVPlayer.currentItem` (via AVPlayerViewController) on the main thread;
+  /// swapping the item off main races its KVO teardown (NSInternalInconsistencyException).
+  /// Runs `block` inline when already on main (no deadlock), else enqueues it on main.
+  private static func runOnMain(_ block: @escaping () -> Void) {
+    if Thread.isMainThread {
+      block()
+    } else {
+      DispatchQueue.main.async(execute: block)
+    }
+  }
+
   init(source: (any HybridVideoPlayerSourceSpec)) throws {
     self.source = source
     self.eventEmitter = HybridVideoPlayerEventEmitter()
@@ -44,8 +59,11 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
     
     Task {
       if source.config.initializeOnCreation == true {
-        self.playerItem = try await initializePlayerItem()
-        self.player.replaceCurrentItem(with: self.playerItem)
+        let playerItem = try await initializePlayerItem()
+        self.playerItem = playerItem
+        await MainActor.run {
+          self.player.replaceCurrentItem(with: playerItem)
+        }
       }
     }
 
@@ -178,14 +196,25 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
         return
       }
       
-      self.playerItem = try await self.initializePlayerItem()
-      self.player.replaceCurrentItem(with: self.playerItem)
+      let playerItem = try await self.initializePlayerItem()
+      self.playerItem = playerItem
+      await MainActor.run {
+        self.player.replaceCurrentItem(with: playerItem)
+      }
     }
   }
 
   func release() {
+    guard !released else { return }
+    released = true
+
     NowPlayingInfoCenterManager.shared.removePlayer(player: player)
-    self.player.replaceCurrentItem(with: nil)
+    // Capture the AVPlayer, not self: release() also runs from deinit, where an escaping
+    // closure must not retain self.
+    let player = self.player
+    HybridVideoPlayer.runOnMain {
+      player.replaceCurrentItem(with: nil)
+    }
     self.playerItem = nil
 
     if let source = self.source as? HybridVideoPlayerSource {
@@ -220,7 +249,9 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
         let playerItem = try await self.initializePlayerItem()
         self.playerItem = playerItem
 
-        self.player.replaceCurrentItem(with: playerItem)
+        await MainActor.run {
+          self.player.replaceCurrentItem(with: playerItem)
+        }
         promise.resolve(withResult: ())
       } catch {
         promise.reject(withError: error)
@@ -279,8 +310,12 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
       }
 
       self.source = source
-      self.playerItem = try await self.initializePlayerItem()
-      self.player.replaceCurrentItem(with: self.playerItem)
+      self.released = false
+      let playerItem = try await self.initializePlayerItem()
+      self.playerItem = playerItem
+      await MainActor.run {
+        self.player.replaceCurrentItem(with: playerItem)
+      }
       NowPlayingInfoCenterManager.shared.updateNowPlayingInfo()
       promise.resolve(withResult: ())
     }

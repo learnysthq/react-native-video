@@ -146,7 +146,9 @@ import AVKit
         return
       }
 
-      // Remove previous controller if any
+      // Remove previous controller if any. Detach its player first so AVKit tears down its
+      // AVPlayer KVO before the controller leaves the hierarchy.
+      self.playerViewController?.player = nil
       self.playerViewController?.willMove(toParent: nil)
       self.playerViewController?.viewIfLoaded?.removeFromSuperview()
       self.playerViewController?.removeFromParent()
@@ -194,6 +196,11 @@ import AVKit
     
     if newSuperview == nil {
       PluginsRegistry.shared.notifyVideoViewDestroyed(view: self)
+
+      // Detach the AVPlayer from the controller on main before the view is torn down, so
+      // AVKit's KVO on it is removed before the player's item is replaced or released.
+      // UIKit calls this on main; runs inline.
+      playerViewController?.player = nil
       
       // We want to disable this when view is about to unmount
       if keepScreenAwake {
@@ -201,6 +208,13 @@ import AVKit
       }
     } else {
       PluginsRegistry.shared.notifyVideoViewCreated(view: self)
+
+      // Re-attach the player detached on a previous removal (remount).
+      if let playerViewController, playerViewController.player == nil,
+        let hybridPlayer = player as? HybridVideoPlayer
+      {
+        playerViewController.player = hybridPlayer.player
+      }
       
       // We want to restore keepScreenAwake after component remount
       if _keepScreenAwake {

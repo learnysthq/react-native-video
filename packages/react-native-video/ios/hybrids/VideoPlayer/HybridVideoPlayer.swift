@@ -35,6 +35,10 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   /// is a no-op. Cleared when `replaceSourceAsync` installs a new source.
   private var released = false
 
+  /// Set by `dispose()` before it releases, so teardown does not emit `onStatusChange`
+  /// through an event emitter that is being destroyed with this object.
+  private var isDisposing = false
+
   /// AVKit observes `AVPlayer.currentItem` (via AVPlayerViewController) on the main thread;
   /// swapping the item off main races its KVO teardown (NSInternalInconsistencyException).
   /// Runs `block` inline when already on main (no deadlock), else enqueues it on main.
@@ -71,7 +75,9 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   }
 
   deinit {
-    release()
+    if !released {
+      release()
+    }
   }
 
   // MARK: - Hybrid Impl
@@ -80,7 +86,7 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
 
   var status: VideoPlayerStatus = .idle {
     didSet {
-      if status != oldValue {
+      if status != oldValue && !isDisposing {
         eventEmitter.onStatusChange(status)
       }
     }
@@ -619,6 +625,7 @@ class HybridVideoPlayer: HybridVideoPlayerSpec, NativeVideoPlayerSpec {
   // MARK: - Memory Management
 
   func dispose() {
+    isDisposing = true
     release()
   }
 

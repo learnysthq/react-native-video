@@ -106,6 +106,21 @@ import AVKit
   
   deinit {
     VideoManager.shared.unregister(view: self)
+
+    // Detach the AVPlayer from the controller when the view is destroyed, so AVKit's KVO on
+    // it is removed before the player's item is replaced or released (BODHI-APP-HB family).
+    // This lives in deinit rather than willMove(toSuperview: nil) because under Fabric this
+    // view is the wrapper's contentView and never receives willMove(toSuperview: nil) on
+    // unmount; the wrapper (shouldBeRecycled == NO) releases it on dealloc. willMove(toWindow:)
+    // is deliberately not used: it fires on screen navigation and would detach video from a
+    // lesson pushed under another screen.
+    // This ends any active PiP session for this view (the app does not use PiP today).
+    // A Fabric-owned UIView deinits on main; hop without blocking if that ever changes.
+    if Thread.isMainThread {
+      playerViewController?.player = nil
+    } else if let controller = playerViewController {
+      DispatchQueue.main.async { controller.player = nil }
+    }
   }
   
   @objc public required init?(coder: NSCoder) {
@@ -196,12 +211,6 @@ import AVKit
     
     if newSuperview == nil {
       PluginsRegistry.shared.notifyVideoViewDestroyed(view: self)
-
-      // Detach the AVPlayer from the controller on main before the view is torn down, so
-      // AVKit's KVO on it is removed before the player's item is replaced or released.
-      // UIKit calls this on main; runs inline. This intentionally ends any active PiP
-      // session for this view (the app does not use PiP today).
-      playerViewController?.player = nil
       
       // We want to disable this when view is about to unmount
       if keepScreenAwake {
@@ -209,13 +218,6 @@ import AVKit
       }
     } else {
       PluginsRegistry.shared.notifyVideoViewCreated(view: self)
-
-      // Re-attach the player detached on a previous removal (remount).
-      if let playerViewController, playerViewController.player == nil,
-        let hybridPlayer = player as? HybridVideoPlayer
-      {
-        playerViewController.player = hybridPlayer.player
-      }
       
       // We want to restore keepScreenAwake after component remount
       if _keepScreenAwake {

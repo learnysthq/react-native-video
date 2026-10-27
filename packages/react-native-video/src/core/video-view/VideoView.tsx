@@ -172,7 +172,18 @@ const VideoView = React.forwardRef<VideoViewRef, VideoViewProps>(
             resizeMode: resizeMode,
           });
         } catch (error) {
-          throw tryParseNativeVideoError(error);
+          const parsedError = tryParseNativeVideoError(error);
+          if (
+            parsedError instanceof VideoError &&
+            parsedError.code === 'view/not-found'
+          ) {
+            // The native view was detached/unregistered; nothing to update.
+            console.warn(
+              '[react-native-video] Native view not found while updating props; skipping update.'
+            );
+            return;
+          }
+          throw parsedError;
         }
       },
       [

@@ -10,13 +10,14 @@ import com.margelo.nitro.video.MixAudioMode
 import com.twg.video.core.plugins.PluginsRegistry
 import com.twg.video.view.VideoView
 import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
 
 @OptIn(UnstableApi::class)
 object VideoManager : LifecycleEventListener {
   private const val TAG = "VideoManager"
   
   // nitroId -> weak VideoView
-  private val views = mutableMapOf<Int, WeakReference<VideoView>>()
+  private val views = ConcurrentHashMap<Int, WeakReference<VideoView>>()
   // player -> list of nitroIds of views that are using this player
   private val players = mutableMapOf<HybridVideoPlayer, MutableList<Int>>()
   

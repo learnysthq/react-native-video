@@ -5,7 +5,10 @@ import android.content.Context.BIND_AUTO_CREATE
 import android.content.Context.BIND_INCLUDE_CAPABILITIES
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.annotation.OptIn
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import com.margelo.nitro.NitroModules
 import com.margelo.nitro.video.HybridVideoPlayer
@@ -21,10 +24,20 @@ fun VideoPlaybackService.Companion.startService(
   val intent = Intent(context, VideoPlaybackService::class.java)
   intent.action = VIDEO_PLAYBACK_SERVICE_INTERFACE
 
-  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-    reactContext.startForegroundService(intent);
-  } else {
-    reactContext.startService(intent);
+  // Starting a foreground service from the background is not allowed on API 31+
+  // (ForegroundServiceStartNotAllowedException), and a start that is never promoted
+  // crashes with ForegroundServiceDidNotStartInTimeException. Only start it while the
+  // app is in the foreground; binding below still creates the service either way.
+  try {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if (isAppInForeground()) {
+        reactContext.startForegroundService(intent)
+      }
+    } else {
+      reactContext.startService(intent)
+    }
+  } catch (e: Exception) {
+    Log.w(TAG, "Could not start playback service, binding only", e)
   }
 
   val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -34,6 +47,16 @@ fun VideoPlaybackService.Companion.startService(
   }
 
   context.bindService(intent, serviceConnection, flags)
+}
+
+private const val TAG = "VideoPlaybackService"
+
+private fun isAppInForeground(): Boolean {
+  return try {
+    ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+  } catch (_: Exception) {
+    false
+  }
 }
 
 @OptIn(UnstableApi::class)

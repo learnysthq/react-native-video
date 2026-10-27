@@ -103,8 +103,12 @@ class VideoPlaybackService : MediaSessionService() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     // Promote right away so the 5 s startForegroundService() window can never be missed,
-    // even when Media3 has no session/activity yet and skips its own promotion.
-    promoteToForeground()
+    // even when Media3 has no session/activity yet and skips its own promotion. Only for
+    // our own start (startService() sets this action): Media3's self-start and media-action
+    // intents carry no such action, and a sticky restart delivers a null intent.
+    if (intent?.action == VIDEO_PLAYBACK_SERVICE_INTERFACE) {
+      promoteToForeground()
+    }
     return super.onStartCommand(intent, flags, startId)
   }
 
@@ -128,7 +132,11 @@ class VideoPlaybackService : MediaSessionService() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       val existing = try {
         getSystemService(NotificationManager::class.java)?.activeNotifications
-          ?.firstOrNull { it.id == DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID }
+          ?.firstOrNull {
+            it.id == DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID &&
+              NotificationCompat.getChannelId(it.notification) ==
+              DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID
+          }
           ?.notification
       } catch (_: Exception) { null }
       if (existing != null) return existing
